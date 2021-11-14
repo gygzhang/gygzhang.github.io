@@ -170,7 +170,7 @@
               <span class="post-meta-item-text">Posted on</span>
               
 
-              <time title="Created: 2021-11-14 11:25:09 / Modified: 11:31:11" itemprop="dateCreated datePublished" datetime="2021-11-14T11:25:09+08:00">2021-11-14</time>
+              <time title="Created: 2021-11-14 11:25:09 / Modified: 12:36:51" itemprop="dateCreated datePublished" datetime="2021-11-14T11:25:09+08:00">2021-11-14</time>
             </span>
 
           
@@ -189,6 +189,23 @@
 <li>在terminal中输入hexo new “标题”</li>
 </ol>
 <p><img src="D:\d2_work\blog\source_posts\hexo相关.assets\image-20211114112815012.png![image-20211114113048434](D:\d2_work\blog\source_posts\hexo相关\image-20211114113048434.png" alt="image-20211114112815012"></p>
+<h3 id="https错误：Failed-to-connect-to-github-com-port-443-Timed-out"><a href="#https错误：Failed-to-connect-to-github-com-port-443-Timed-out" class="headerlink" title="https错误：Failed to connect to github.com port 443: Timed out"></a>https错误：<strong>Failed to connect to github.com port 443: Timed out</strong></h3><p>解决办法：</p>
+<ol>
+<li><p>进入hexo根目录，打开*_config.yml*文件</p>
+</li>
+<li><p>将</p>
+<p><code>repository: https://github.com/USRNAME/USRNAME.github.io</code></p>
+<p>改为：</p>
+<p><code>repository: git@github.USRNAME/USRNAME.github.io.git</code></p>
+</li>
+<li><p>如果出现*Permission denied (publickey).*错误，将自己电脑的公钥添加到github即可解决</p>
+<p>生成公钥：</p>
+<p><code>ssh-keygen -t rsa -C &quot;你的email地址&quot;</code></p>
+</li>
+</ol>
+<p><img src="D:\d2_work\blog\source_posts\hexo相关\image-20211114123310712.png" alt="image-20211114123310712"></p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>数字签名是什么？ - 阮一峰的网络日志<br><a target="_blank" rel="noopener" href="https://www.ruanyifeng.com/blog/2011/08/what_is_a_digital_signature.html">https://www.ruanyifeng.com/blog/2011/08/what_is_a_digital_signature.html</a></p>
+<p>SSH原理与运用（一）：远程登录 - 阮一峰的网络日志<br><a target="_blank" rel="noopener" href="https://www.ruanyifeng.com/blog/2011/12/ssh_remote_login.html">https://www.ruanyifeng.com/blog/2011/12/ssh_remote_login.html</a></p>
 
       
     </div>
