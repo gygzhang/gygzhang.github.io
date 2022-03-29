@@ -145,6 +145,96 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/29/xv6-lock%E5%AE%9E%E9%AA%8C%E6%80%BB%E7%BB%93/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/03/29/xv6-lock%E5%AE%9E%E9%AA%8C%E6%80%BB%E7%BB%93/" class="post-title-link" itemprop="url">xv6 lock实验总结</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2022-03-29 12:29:00 / Modified: 14:19:51" itemprop="dateCreated datePublished" datetime="2022-03-29T12:29:00+08:00">2022-03-29</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="任务一：-Memory-allocator"><a href="#任务一：-Memory-allocator" class="headerlink" title="任务一： Memory allocator"></a>任务一： Memory allocator</h2><h3 id="描述"><a href="#描述" class="headerlink" title="描述"></a>描述</h3><p>在xv6中，物理内存都是由操作系统实现的内存分配器管理的，内核通过申请物理内存，然后将其映射到虚拟内存，提供给用户进程使用。而要申请物理内存，就要使用内存分配器提供的函数<code>kalloc</code>，要释放物理内存，使用<code>kfree</code>来进行释放。</p>
+<p>任务一主要要解决的问题是多核CPU之间同时使用内存分配器的冲突。<br>在OS启动的时候，会调用一个物理内存的初始化函数<code>kinit()</code>，该函数将可给用户进程使用的物理内存以<code>4096</code>字节为一页，组织成页的集合，然后将这些页连接成一个链表，这个链表就是<code>kalloc</code>和<code>kfree</code>操作的对象。<br>当多个CPU都需要给获取物理内存的时候，访问的是同一个链表，因此需要通过锁来进行共享资源的保护，这样会将不同CPU的分配申请串行化。</p>
+<h3 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h3><p>因为冲突存在于不同的CPU之间，因此我们可以实现per-CPU的内存分配器。 具体做法是给每一个CPU都提供一个物理内存的链表：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">spinlock</span> <span class="title">lock</span>;</span></span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">run</span> *<span class="title">freelist</span>;</span></span><br><span class="line">  <span class="keyword">int</span> freecnt;</span><br><span class="line">&#125; kmem[NCPU];</span><br></pre></td></tr></table></figure>
+<p>之后每个CPU都访问自己链表进行内存分配和释放的操作，每个CPU内部不同进程申请内存操作由自己的锁进行进程同步。物理内存如何分配给每个CPU呢，可以平均分配。 但是可能会出现一个CPU使用大量内存，而另一个CPU几乎没使用内存，这个时候我们需要进行“偷”内存(其他CPU未使用的内存)的操作。因此与其平均分配，不如一开始就给CPU0(运行OS初始化代码的CPU)全部的物理内存，其他CPU需要内存的时候，便进行“偷”内存的操作。偷物理内存的代码如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; NCPU; i++)</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="keyword">if</span>(i==id) <span class="keyword">continue</span>;</span><br><span class="line">      acquire(&amp;kmem[i].lock);</span><br><span class="line">      <span class="comment">// if there is STEAL_SIZE pages to steal</span></span><br><span class="line">      <span class="keyword">if</span>(kmem[i].freelist&amp;&amp;kmem[i].freecnt&gt;=STEAL_SIZE)&#123;</span><br><span class="line">        kmem[id].freelist = kmem[i].freelist;</span><br><span class="line">        kmem[id].freecnt += STEAL_SIZE;</span><br><span class="line">        </span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">run</span> *<span class="title">temp</span> =</span> kmem[i].freelist;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> j = <span class="number">0</span>; j &lt; STEAL_SIZE<span class="number">-1</span>; j++)</span><br><span class="line">        &#123;</span><br><span class="line">          temp = temp-&gt;next;</span><br><span class="line">        &#125;</span><br><span class="line">        kmem[i].freelist = temp-&gt;next;</span><br><span class="line">        temp-&gt;next = <span class="number">0</span>;</span><br><span class="line">        kmem[i].freecnt -= STEAL_SIZE;</span><br><span class="line">        </span><br><span class="line">        r = kmem[id].freelist;</span><br><span class="line">        kmem[id].freelist = r-&gt;next;  </span><br><span class="line">        release(&amp;kmem[i].lock);</span><br><span class="line">        release(&amp;kmem[id].lock);</span><br><span class="line">        <span class="keyword">if</span>(r) kmem[id].freecnt--;</span><br><span class="line">        pop_off();</span><br><span class="line">        <span class="keyword">if</span>(r)</span><br><span class="line">          <span class="built_in">memset</span>((<span class="keyword">char</span>*)r, <span class="number">5</span>, PGSIZE); <span class="comment">// fill with junk</span></span><br><span class="line">        </span><br><span class="line">        <span class="keyword">return</span> (<span class="keyword">void</span>*)r;</span><br><span class="line">      <span class="comment">// if the cpu&#x27;s mem is less than STEAL_SIZE pages, but greater than 0</span></span><br><span class="line">      &#125;<span class="keyword">else</span> <span class="keyword">if</span>(kmem[i].freelist)&#123;</span><br><span class="line">        struct run *temp = kmem[i].freelist;</span><br><span class="line">        kmem[i].freelist = kmem[i].freelist-&gt;next;</span><br><span class="line">        kmem[i].freecnt--;</span><br><span class="line">        release(&amp;kmem[i].lock);</span><br><span class="line">        release(&amp;kmem[id].lock);</span><br><span class="line">        pop_off();</span><br><span class="line">        <span class="built_in">memset</span>((<span class="keyword">char</span>*)temp, <span class="number">5</span>, PGSIZE); <span class="comment">// fill with junk</span></span><br><span class="line">        <span class="keyword">return</span> (<span class="keyword">void</span>*)temp;</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">//will return (void*)0 in the end, indicate that all physis mem is run out</span></span><br><span class="line">      <span class="keyword">else</span>&#123;</span><br><span class="line"></span><br><span class="line">      &#125;</span><br><span class="line">      release(&amp;kmem[i].lock);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>kfree没有需要大量改动的地方，只需要改为在每个CPU自己的链表上进行操作即可。</p>
+<h2 id="任务二：-Buffer-cache"><a href="#任务二：-Buffer-cache" class="headerlink" title="任务二： Buffer cache"></a>任务二： Buffer cache</h2><h2 id="任务分析"><a href="#任务分析" class="headerlink" title="任务分析"></a>任务分析</h2><p>这个任务其实还是挺难的，它不像之前的实验，会给很多具体的操作提示，这个实验只给了大概的思路，需要自己进行实现。</p>
+<p>我们需要优化的函数主要是<code>static struct buf* bget(uint dev, uint blockno)</code>，该函数内部操作的数据结构是buffer cache和buf。</p>
+<p>buffer cache是操作系统用于缓存磁盘数据而使用的数据结构，其定义如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">spinlock</span> <span class="title">lock</span>;</span></span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> <span class="title">buf</span>[<span class="title">NBUF</span>];</span></span><br><span class="line"></span><br><span class="line">  <span class="comment">// Linked list of all buffers, through prev/next.</span></span><br><span class="line">  <span class="comment">// Sorted by how recently the buffer was used.</span></span><br><span class="line">  <span class="comment">// head.next is most recent, head.prev is least.</span></span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> <span class="title">head</span>;</span></span><br><span class="line">&#125; bcache;</span><br></pre></td></tr></table></figure>
+<p>buf定义如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">buf</span> &#123;</span></span><br><span class="line">  <span class="keyword">int</span> valid;   <span class="comment">// has data been read from disk?</span></span><br><span class="line">  <span class="keyword">int</span> disk;    <span class="comment">// does disk &quot;own&quot; buf?</span></span><br><span class="line">  uint dev;</span><br><span class="line">  uint blockno;</span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">sleeplock</span> <span class="title">lock</span>;</span></span><br><span class="line">  uint refcnt;</span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">prev</span>;</span> <span class="comment">// LRU cache list</span></span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">next</span>;</span></span><br><span class="line">  uchar data[BSIZE];</span><br><span class="line">  uint timestamp;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>当进程想要访问磁盘数据，就需要使用以上两个数据结构，通过检查<code>buf</code>中的<code>valid</code>域，来判断是否需要再次从磁盘中读取数据，通过<code>refcnt</code>域来判断该<code>buf</code>是否没有被任何进程所引用。<code>bget</code>的两个参数通过与buf中对应参数进行比较，如果相等，则不需要再次从磁盘中读取数据，否则应该从磁盘中读取数据(通过<code>valid</code>域实现)。</p>
+<p>xv6是使用LRU最近最少使用算法来实现的，但是buffer cache只有一个，在不同cpu、不同进程之间都存在锁的竞争，给每个CPU单独的buffer cache，不同cpu上的进程可能会访问同一个buffer cache，这个会使实现变得非常复杂，而且性能可能会更差，因此不能像<code>kalloc</code>那样通过实现per-CPU内存分配器就能消除大部分的锁竞争。因此lab建议我们使用哈希桶来解决锁竞争。</p>
+<h3 id="实现思路-1"><a href="#实现思路-1" class="headerlink" title="实现思路"></a>实现思路</h3><p>因此解决方案是定义一个哈希表，内部每个哈希桶都有自己的锁，有自己的buf，磁盘号通过哈希函数</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bucketid = hash(blkno) = blkno%NBUCKET</span><br></pre></td></tr></table></figure>
+<p>来映射到不同或相同的哈希桶中，为什么这样能减少锁竞争呢？ 想象一下，如果没有哈希桶，两个本来应该映射到不同哈希桶的磁盘号，就会通过同一个buffer cache来进行访问。如果他们同时调用<code>bget</code>函数，这两个磁盘号之间就会存在锁竞争，而如果使用哈希表，这两个磁盘号就会映射到不同的哈希桶之中，他们可以独立进行操作。</p>
+<p>因为使用了哈希表，所以我们不在需要LRU，而是使用单向链表，一次重新定义两个数据结构：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">spinlock</span> <span class="title">lock</span>;</span></span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> <span class="title">buf</span>[<span class="title">NBUF</span>];</span></span><br><span class="line">&#125; bcache;</span><br></pre></td></tr></table></figure>
+<p>buf定义如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">buf</span> &#123;</span></span><br><span class="line">  <span class="keyword">int</span> valid;   <span class="comment">// has data been read from disk?</span></span><br><span class="line">  <span class="keyword">int</span> disk;    <span class="comment">// does disk &quot;own&quot; buf?</span></span><br><span class="line">  uint dev;</span><br><span class="line">  uint blockno;</span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">sleeplock</span> <span class="title">lock</span>;</span></span><br><span class="line">  uint refcnt;</span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">prev</span>;</span> <span class="comment">// LRU cache list</span></span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">next</span>;</span></span><br><span class="line">  uchar data[BSIZE];</span><br><span class="line">  uint timestamp;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>增加哈希表的定义：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> NBUCKET 13</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">spinlock</span> <span class="title">lock</span>[<span class="title">NBUCKET</span>];</span></span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">head</span>[<span class="title">NBUCKET</span>];</span></span><br><span class="line">  <span class="keyword">int</span> nfree[NBUCKET];</span><br><span class="line">&#125;bucket;</span><br></pre></td></tr></table></figure>
+<p>其中<code>bcache</code>删除了<code>head</code>域， buf增加了<code>timestamp</code>域，用于记录<code>buf</code>被访问的时间。<code>bucket</code>结构为哈希表，其中的每个哈希桶用于收集<code>buf</code>结构体，用<code>head</code>指示，每个桶由其中的<code>lock</code>保护， <code>nfree</code>指示该哈希桶有多少个可用于读取新的磁盘数据的buf。</p>
+<p>受实验一的启发，在<code>buf</code>如何分配给不同哈希桶的问题上，我选择了将所有<code>buf</code>分配给0号哈希桶。如果其他哈希桶需要读取新的磁盘号(<code>bucket.nfree[bucketid]==0</code>),则在<code>nfree</code>域大于0的哈希桶中“偷”<code>buf</code>。“偷”实现<em>思路</em>如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">struct buf*</span></span><br><span class="line"><span class="function"><span class="title">steal_buf_from_other_bucket</span><span class="params">(<span class="keyword">int</span> k)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  UNLOCK(k);</span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; NBUCKET; i++)</span><br><span class="line">  &#123;</span><br><span class="line">    <span class="comment">//skip the stealer</span></span><br><span class="line">    <span class="keyword">if</span>(i==k) <span class="keyword">continue</span>;</span><br><span class="line">    LOCK(i);</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">b</span>;</span></span><br><span class="line">    <span class="comment">// find the buf with min timestamp</span></span><br><span class="line">    b = find_min_free_buf(i); </span><br><span class="line">    <span class="keyword">if</span>(b)&#123;</span><br><span class="line">      UNLOCK(i);</span><br><span class="line">      <span class="keyword">return</span> b;</span><br><span class="line">    &#125;</span><br><span class="line">    UNLOCK(i);</span><br><span class="line">  &#125;</span><br><span class="line">  panic(<span class="string">&quot;no buf to steal&quot;</span>);</span><br><span class="line">  </span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>如果哈希桶<code>nfree==0</code>，则我们需要从其他桶偷。偷完之后，之后都会遍历该哈希桶所指向的链表，对于哈希桶内部的每个buf，我们首先需要将其<code>dev</code>，<code>blokno</code>域和<code>beget</code>对应的两个参数对比，用于判断是否需要从磁盘读取，如果不需要，说明曾经被读取过，因此直接返回，如果需要从磁盘读取，我们需要从该bucket中获取一个free(刚刚”偷”过一个，所以至少有一个free的<code>buf</code>)的<code>buf</code>，将其<code>valid</code>域设置为0，表示需要从磁盘中读取数据。<br>bget的实现思路如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> struct buf*</span></span><br><span class="line"><span class="function"><span class="title">bget</span><span class="params">(uint dev, uint blockno)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">b</span>=</span><span class="number">0</span>;</span><br><span class="line">  <span class="keyword">int</span> k = blockno % NBUCKET;</span><br><span class="line"></span><br><span class="line">  LOCK(k);</span><br><span class="line">  <span class="comment">//need steal from other bucket</span></span><br><span class="line">  <span class="keyword">if</span>(bucket.nfree[k]==<span class="number">0</span>)&#123;</span><br><span class="line">    b = steal_buf_from_other_bucket(k);</span><br><span class="line">    LOCK(k);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span>(b) &#123;</span><br><span class="line">    bconant(k,b);</span><br><span class="line">    bucket.nfree[k]++;</span><br><span class="line">  &#125;</span><br><span class="line">  b = bucket.head[k];</span><br><span class="line">  <span class="comment">// Is the block already cached?</span></span><br><span class="line">  <span class="keyword">while</span>(b)&#123;</span><br><span class="line">    <span class="keyword">if</span>(b-&gt;dev == dev &amp;&amp; b-&gt;blockno == blockno)&#123;</span><br><span class="line">      <span class="keyword">if</span>(b-&gt;refcnt==<span class="number">0</span>) bucket.nfree[k]--;</span><br><span class="line">      b-&gt;refcnt++;</span><br><span class="line">      UNLOCK(k);</span><br><span class="line">      acquiresleep(&amp;b-&gt;lock);</span><br><span class="line">      <span class="keyword">return</span> b;</span><br><span class="line">    &#125;</span><br><span class="line">    b = b-&gt;next;</span><br><span class="line">  &#125;</span><br><span class="line">  b = bucket.head[k];</span><br><span class="line">  <span class="comment">// Not cached.</span></span><br><span class="line">  <span class="keyword">while</span>(b)&#123;</span><br><span class="line">    <span class="keyword">if</span>(b-&gt;refcnt == <span class="number">0</span>) &#123;</span><br><span class="line">      b-&gt;dev = dev;</span><br><span class="line">      b-&gt;blockno = blockno;</span><br><span class="line">      b-&gt;valid = <span class="number">0</span>;</span><br><span class="line">      b-&gt;refcnt = <span class="number">1</span>;</span><br><span class="line">      bucket.nfree[k]--;</span><br><span class="line">      UNLOCK(k);</span><br><span class="line">      acquiresleep(&amp;b-&gt;lock);</span><br><span class="line">      <span class="keyword">return</span> b;</span><br><span class="line">    &#125;</span><br><span class="line">    b = b-&gt;next;</span><br><span class="line">  &#125;</span><br><span class="line">  panic(<span class="string">&quot;bget: no buffers&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="心得体会"><a href="#心得体会" class="headerlink" title="心得体会"></a>心得体会</h2><p>第一个任务很简单，但是第二个确实配得上hard难度，一是它没有告诉我们具体我们该怎么做，只是指出了一个方向。另一方面，这个实验似乎本身就存在缺陷，因为就算我没做任何改动，usertests里面的writebig测试也通不过，在xv6的github官方仓库里面我也看到有人提了相关的<a target="_blank" rel="noopener" href="https://github.com/mit-pdos/xv6-riscv/issues/59">issue</a>，但是MIT没有回复。我只能把它当做和实验实现无关未知错误，毕竟bachetest是能通过的。</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
     <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/19/xv6%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE%E6%A0%88%E5%AE%9E%E7%8E%B0%E5%88%86%E6%9E%90/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -767,63 +857,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/08/12/p3/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="John Doe">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Hexo">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/08/12/p3/" class="post-title-link" itemprop="url">p3</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-08-12 15:46:55" itemprop="dateCreated datePublished" datetime="2021-08-12T15:46:55+08:00">2021-08-12</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -893,12 +926,12 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-count">17</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
-        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-count">5</span>
         <span class="site-state-item-name">tags</span>
       </div>
   </nav>
