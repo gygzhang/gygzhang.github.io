@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="xv6 文件系统分析前言最近断断续续做了xv6的fs lab, 在做lab之前还是首先要阅读xv6 book相关章节。不得不说，这一章的内容还是非常多的，毕竟文件系统是非常复杂的。这次的lab说实话不是很难，只要理解了xv6的文件系统的相关思想，还是非常好做出来的。本篇post以write为例，自顶向下分析一下涉及到的实现和思想。 write系统调用分析xv6系统调用传参原理write()系统调用">
+<meta property="og:type" content="article">
+<meta property="og:title" content="xv6 file system -- write() system call for example">
+<meta property="og:url" content="http://example.com/2022/04/10/xv6-file-system-write-system-call-for-example/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="xv6 文件系统分析前言最近断断续续做了xv6的fs lab, 在做lab之前还是首先要阅读xv6 book相关章节。不得不说，这一章的内容还是非常多的，毕竟文件系统是非常复杂的。这次的lab说实话不是很难，只要理解了xv6的文件系统的相关思想，还是非常好做出来的。本篇post以write为例，自顶向下分析一下涉及到的实现和思想。 write系统调用分析xv6系统调用传参原理write()系统调用">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/2022-04-10-11-51-05.png">
+<meta property="og:image" content="http://example.com/2022-04-10-13-39-39.png">
+<meta property="article:published_time" content="2022-04-10T03:19:37.000Z">
+<meta property="article:modified_time" content="2022-04-10T10:01:23.036Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="xv6">
+<meta property="article:tag" content="file system">
+<meta property="article:tag" content="write system call">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2022-04-10-11-51-05.png">
+
+<link rel="canonical" href="http://example.com/2022/04/10/xv6-file-system-write-system-call-for-example/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>xv6 file system -- write() system call for example | Hexo</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Hexo</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/04/10/xv6-file-system-write-system-call-for-example/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          xv6 file system -- write() system call for example
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2022-04-10 11:19:37 / Modified: 18:01:23" itemprop="dateCreated datePublished" datetime="2022-04-10T11:19:37+08:00">2022-04-10</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="xv6-文件系统分析"><a href="#xv6-文件系统分析" class="headerlink" title="xv6 文件系统分析"></a>xv6 文件系统分析</h2><h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>最近断断续续做了xv6的<a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/labs/fs.html">fs lab</a>, 在做lab之前还是首先要阅读xv6 book相关章节。不得不说，这一章的内容还是非常多的，毕竟文件系统是非常复杂的。这次的lab说实话不是很难，只要理解了xv6的文件系统的相关思想，还是非常好做出来的。本篇post以<code>write</code>为例，自顶向下分析一下涉及到的实现和思想。</p>
+<h3 id="write系统调用分析"><a href="#write系统调用分析" class="headerlink" title="write系统调用分析"></a>write系统调用分析</h3><h4 id="xv6系统调用传参原理"><a href="#xv6系统调用传参原理" class="headerlink" title="xv6系统调用传参原理"></a>xv6系统调用传参原理</h4><p><code>write()</code>系统调用的实现如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">uint64</span></span><br><span class="line"><span class="function"><span class="title">sys_write</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">file</span> *<span class="title">f</span>;</span></span><br><span class="line">  <span class="keyword">int</span> n;</span><br><span class="line">  uint64 p;</span><br><span class="line">  <span class="keyword">if</span>(argfd(<span class="number">0</span>, <span class="number">0</span>, &amp;f) &lt; <span class="number">0</span> || argint(<span class="number">2</span>, &amp;n) &lt; <span class="number">0</span> || argaddr(<span class="number">1</span>, &amp;p) &lt; <span class="number">0</span>)</span><br><span class="line">    <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">  <span class="keyword">return</span> filewrite(f, p, n);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>说一下，xv6里面的系统调用的实现都是没有参数的，但是我们在使用<code>write</code>这个系统调用明明是传入了参数的，这是怎么回事呢？ </p>
+<p>一句话解释就是，参数是存在寄存器之中的。详细的解释，我们先来看看一段在user目录下的perl代码片段</p>
+<figure class="highlight pl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">sub</span> <span class="title">entry</span> </span>&#123;</span><br><span class="line">    <span class="keyword">my</span> $name = <span class="keyword">shift</span>;</span><br><span class="line">    <span class="keyword">print</span> <span class="string">&quot;.global $name\n&quot;</span>;</span><br><span class="line">    <span class="keyword">print</span> <span class="string">&quot;<span class="subst">$&#123;name&#125;</span>:\n&quot;</span>;</span><br><span class="line">    <span class="keyword">print</span> <span class="string">&quot; li a7, SYS_<span class="subst">$&#123;name&#125;</span>\n&quot;</span>;</span><br><span class="line">    <span class="keyword">print</span> <span class="string">&quot; ecall\n&quot;</span>;</span><br><span class="line">    <span class="keyword">print</span> <span class="string">&quot; ret\n&quot;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这段代码会生成<code>write</code>的汇编代码：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">.global write</span><br><span class="line">write:</span><br><span class="line">    li a7, SYS_write</span><br><span class="line">    ecall</span><br><span class="line">    ret</span><br></pre></td></tr></table></figure>
+
+<p>这段代码就能解释，<code>li a7, SYS_write</code> 表示将<code>SYS_write</code>这个数放到<code>a7</code>这个寄存器中，<code>ecall</code>这个riscv指令将进入<code>usertrap()</code>这个系统调用中，而<code>usertrap()</code>是中断，系统调用，异常都要进入的函数。<code>usertrap()</code>判断出本次调用是通过<code>ecall</code>指令进入的，就得知将要调用一个系统调用，从而调用<code>syscall()</code>函数. <code>syscall()</code>通过一个映射表，根据刚刚的<code>a7</code>寄存器得到对应的函数指针，然后调用它。<br><code>syscall()</code>的实现如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">syscall</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="keyword">int</span> num;</span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">proc</span> *<span class="title">p</span> =</span> myproc();</span><br><span class="line">![](<span class="number">2022</span><span class="number">-04</span><span class="number">-10</span><span class="number">-11</span><span class="number">-50</span><span class="number">-57.</span>png)</span><br><span class="line">  num = p-&gt;trapframe-&gt;a7;</span><br><span class="line">  <span class="keyword">if</span>(num &gt; <span class="number">0</span> &amp;&amp; num &lt; NELEM(syscalls) &amp;&amp; syscalls[num]) &#123;</span><br><span class="line">    p-&gt;trapframe-&gt;a0 = syscalls[num]();</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%d %s: unknown sys call %d\n&quot;</span>,</span><br><span class="line">            p-&gt;pid, p-&gt;name, num);</span><br><span class="line">    p-&gt;trapframe-&gt;a0 = <span class="number">-1</span>;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如果是调用的<code>write</code>，那么我们回到<code>sys_write()</code>之中,<code>sys_write</code>会读取寄存器，以获得参数。以下是riscv一些的寄存器的用处：<br><img src="/2022-04-10-11-51-05.png"></p>
+<p>可以看到<code>a0</code>-<code>a7</code>都是函数参数， 其中<code>a0</code>，<code>a1</code>还可以用作返回值。</p>
+<p>这就是为什么调用时候是写了参数的，实现却没有写参数，因为参数都在寄存器里面。如果参数类型不是整型的话，怎么办呢 —指针。</p>
+<h4 id="write"><a href="#write" class="headerlink" title="write"></a>write</h4><p>再回到<code>write</code>本身，<code>write</code>会调用<code>filewrite()</code>这个函数，我们主要关注<code>INODE</code>的读写，因此暂时忽略<code>PIPE</code>或者<code>DEVICE</code>这些文件类型。 因此其中值得注意的代码片段为：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">begin_op();</span><br><span class="line">ilock(f-&gt;ip);</span><br><span class="line"><span class="keyword">if</span> ((r = writei(f-&gt;ip, <span class="number">1</span>, addr + i, f-&gt;off, n1)) &gt; <span class="number">0</span>)</span><br><span class="line">f-&gt;off += r;</span><br><span class="line">iunlock(f-&gt;ip);</span><br><span class="line">end_op();</span><br></pre></td></tr></table></figure>
+<p>这段代码xv6中称之为事务，是包裹在一个循环之中的，为的是防止一次<code>write</code>超过事务的大小。事务的概念和数据库之中的差不多。能够保证一次操作是原子操作，要么都做，要么都不做。</p>
+<p><code>begin_op()</code>代码如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">begin_op</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  acquire(&amp;<span class="built_in">log</span>.lock);</span><br><span class="line">  <span class="keyword">while</span>(<span class="number">1</span>)&#123;</span><br><span class="line">    <span class="keyword">if</span>(<span class="built_in">log</span>.committing)&#123;</span><br><span class="line">      sleep(&amp;<span class="built_in">log</span>, &amp;<span class="built_in">log</span>.lock);</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span>(<span class="built_in">log</span>.lh.n + (<span class="built_in">log</span>.outstanding+<span class="number">1</span>)*MAXOPBLOCKS &gt; LOGSIZE)&#123;</span><br><span class="line">      <span class="comment">// other commit has not commit yet, so the log space is running out ?</span></span><br><span class="line">      <span class="comment">// this op might exhaust log space; wait for commit.</span></span><br><span class="line">      sleep(&amp;<span class="built_in">log</span>, &amp;<span class="built_in">log</span>.lock);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="built_in">log</span>.outstanding += <span class="number">1</span>;</span><br><span class="line">      release(&amp;<span class="built_in">log</span>.lock);</span><br><span class="line">      <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看出主要作用是用<code>log.outstanding</code>记录文件操作的个数. </p>
+<p>write()的作用主要是：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Write data to inode.</span></span><br><span class="line"><span class="comment">// Caller must hold ip-&gt;lock.</span></span><br><span class="line"><span class="comment">// If user_src==1, then src is a user virtual address;</span></span><br><span class="line"><span class="comment">// otherwise, src is a kernel address.</span></span><br><span class="line"><span class="comment">// Returns the number of bytes successfully written.</span></span><br><span class="line"><span class="comment">// If the return value is less than the requested n,</span></span><br><span class="line"><span class="comment">// there was an error of some kind.</span></span><br><span class="line"><span class="function"><span class="keyword">int</span></span></span><br><span class="line"><span class="function"><span class="title">writei</span><span class="params">(struct inode *ip, <span class="keyword">int</span> user_src, uint64 src, uint off, uint n)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  uint tot, m;</span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">bp</span>;</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span>(off &gt; ip-&gt;size || off + n &lt; off)</span><br><span class="line">    <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">  <span class="keyword">if</span>(off + n &gt; MAXFILE*BSIZE)</span><br><span class="line">    <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">for</span>(tot=<span class="number">0</span>; tot&lt;n; tot+=m, off+=m, src+=m)&#123;</span><br><span class="line">    bp = bread(ip-&gt;dev, bmap(ip, off/BSIZE));</span><br><span class="line">    m = min(n - tot, BSIZE - off%BSIZE);</span><br><span class="line">    <span class="keyword">if</span>(either_copyin(bp-&gt;data + (off % BSIZE), user_src, src, m) == <span class="number">-1</span>) &#123;</span><br><span class="line">      brelse(bp);</span><br><span class="line">      <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    log_write(bp);</span><br><span class="line">    brelse(bp);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span>(off &gt; ip-&gt;size)</span><br><span class="line">    ip-&gt;size = off;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// write the i-node back to disk even if the size didn&#x27;t change</span></span><br><span class="line">  <span class="comment">// because the loop above might have called bmap() and added a new</span></span><br><span class="line">  <span class="comment">// block to ip-&gt;addrs[].</span></span><br><span class="line">  iupdate(ip);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> tot;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>可以看到里面用到了一个<code>bmap</code>函数，该函数主要作用是根据<code>inode</code>及文件的偏移找到对应的磁盘块的缓存<code>bp</code>，然后将内存中的数据复制到<code>bp</code>中，然后执行<code>log_write</code>，这个函数是<code>bwrite</code>函数的一个代理函数，最终，放到<code>log_write</code>之中的磁盘块缓存都会被写回到磁盘之中。</p>
+<h4 id="bmap函数"><a href="#bmap函数" class="headerlink" title="bmap函数"></a><code>bmap</code>函数</h4><p>如前所说，该函数主要作用是根据<code>inode</code>及文件的偏移找到对应的磁盘块的缓存<code>bp</code>并返回。代码如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Inode content</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">// The content (data) associated with each inode is stored</span></span><br><span class="line"><span class="comment">// in blocks on the disk. The first NDIRECT block numbers</span></span><br><span class="line"><span class="comment">// are listed in ip-&gt;addrs[].  The next NINDIRECT blocks are</span></span><br><span class="line"><span class="comment">// listed in block ip-&gt;addrs[NDIRECT].</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// Return the disk block address of the nth block in inode ip.</span></span><br><span class="line"><span class="comment">// If there is no such block, bmap allocates one.</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> uint</span></span><br><span class="line"><span class="function"><span class="title">bmap</span><span class="params">(struct inode *ip, uint bn)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  uint addr, addr1, *a;</span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">bp</span>, *<span class="title">bp1</span>;</span></span><br><span class="line">  <span class="keyword">if</span>(bn &lt; NDIRECT)&#123;</span><br><span class="line">    <span class="keyword">if</span>((addr = ip-&gt;addrs[bn]) == <span class="number">0</span>)</span><br><span class="line">      ip-&gt;addrs[bn] = addr = balloc(ip-&gt;dev);</span><br><span class="line">    <span class="keyword">return</span> addr;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">//bn = bn -11</span></span><br><span class="line">  bn -= NDIRECT;</span><br><span class="line">  <span class="keyword">if</span>(bn &lt; NINDIRECT)&#123;</span><br><span class="line">    <span class="comment">// Load indirect block, allocating if necessary.</span></span><br><span class="line">    <span class="keyword">if</span>((addr = ip-&gt;addrs[NDIRECT]) == <span class="number">0</span>)</span><br><span class="line">      ip-&gt;addrs[NDIRECT] = addr = balloc(ip-&gt;dev);</span><br><span class="line">    bp = bread(ip-&gt;dev, addr);</span><br><span class="line">    a = (uint*)bp-&gt;data;</span><br><span class="line">    <span class="keyword">if</span>((addr = a[bn]) == <span class="number">0</span>)&#123;</span><br><span class="line">      a[bn] = addr = balloc(ip-&gt;dev);</span><br><span class="line">      log_write(bp);</span><br><span class="line">    &#125;</span><br><span class="line">    brelse(bp);</span><br><span class="line">    <span class="keyword">return</span> addr;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  <span class="comment">//printf(&quot;`bmap: %d, %d\n&quot;, bn, NDBINDIRECT);</span></span><br><span class="line">  <span class="comment">// bn = bn - (11+256)</span></span><br><span class="line">  bn -= (NINDIRECT);</span><br><span class="line">  <span class="keyword">if</span>(bn &lt; NDBINDIRECT)&#123;</span><br><span class="line">    <span class="keyword">if</span>((addr = ip-&gt;addrs[NDIRECT+<span class="number">1</span>]) == <span class="number">0</span>)</span><br><span class="line">      ip-&gt;addrs[NDIRECT+<span class="number">1</span>] = addr = balloc(ip-&gt;dev);</span><br><span class="line">    <span class="comment">// L1 address  </span></span><br><span class="line">    bp = bread(ip-&gt;dev, addr);</span><br><span class="line">    <span class="comment">//addr1 = ((uint*) bp-&gt;data)[bn/256];</span></span><br><span class="line">    <span class="keyword">if</span>((addr1 = ((uint*) bp-&gt;data)[bn/<span class="number">256</span>]) == <span class="number">0</span>)&#123;</span><br><span class="line">      ((uint*)bp-&gt;data)[bn/<span class="number">256</span>] = addr1 = balloc(ip-&gt;dev);</span><br><span class="line">      log_write(bp);</span><br><span class="line">    &#125;</span><br><span class="line">      </span><br><span class="line">    brelse(bp);</span><br><span class="line">    <span class="comment">//L2 address</span></span><br><span class="line">    bp1 = bread(ip-&gt;dev, addr1);</span><br><span class="line"></span><br><span class="line">    a = (uint*)bp1-&gt;data;</span><br><span class="line">    <span class="keyword">if</span>((addr1 = a[bn%<span class="number">256</span>]) == <span class="number">0</span>)&#123;</span><br><span class="line">      <span class="comment">// if(bn==285) printf(&quot;why?\n&quot;);</span></span><br><span class="line">      a[bn%<span class="number">256</span>] = addr1 = balloc(ip-&gt;dev);</span><br><span class="line">      log_write(bp1);</span><br><span class="line">    &#125;</span><br><span class="line">    brelse(bp1);</span><br><span class="line">    <span class="keyword">return</span> addr1;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">//printf(&quot;bmap: %d, %d\n&quot;, bn, NDBINDIRECT);</span></span><br><span class="line">  panic(<span class="string">&quot;bmap: out of range&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h5 id="lab-大文件支持"><a href="#lab-大文件支持" class="headerlink" title="lab 大文件支持"></a>lab 大文件支持</h5><p>该函数也是lab之一需要大改的函数之一，对应的任务需要我们实现更大的文件支持，在原始的实现中，文件的大小为11个block+256个block=267个block，这是由inode的定义决定的：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// in-memory copy of an inode</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">inode</span> &#123;</span></span><br><span class="line">  uint dev;           <span class="comment">// Device number</span></span><br><span class="line">  uint inum;          <span class="comment">// Inode number</span></span><br><span class="line">  <span class="keyword">int</span> ref;            <span class="comment">// Reference count</span></span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">sleeplock</span> <span class="title">lock</span>;</span> <span class="comment">// protects everything below here</span></span><br><span class="line">  <span class="keyword">int</span> valid;          <span class="comment">// inode has been read from disk?</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">short</span> type;         <span class="comment">// copy of disk inode</span></span><br><span class="line">  <span class="keyword">short</span> major;</span><br><span class="line">  <span class="keyword">short</span> minor;</span><br><span class="line">  <span class="keyword">short</span> nlink;</span><br><span class="line">  uint size;</span><br><span class="line">  uint addrs[NDIRECT+<span class="number">1</span>];</span><br><span class="line">  <span class="keyword">char</span> target[<span class="number">128</span>];</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p><code>NDIRECT</code>的值是11，代表着11个block，额外的1代表一个指针，指向了另一个block，而block中的每个元素为一个指针，分别指向一个block，一个block的大小/指针的大小=256，所以说文件的最大的大小为267block。我们的任务是使最大文件大小变大，既然使用了指针，所以我可以考虑再次使用指针，使用一个二级指针来实现，具体思想就是将inode中的addrs的大小变成NDIRECT+2， 多出的1是一个二级指针，指向一个指针block，而这个指针block又指向一个指针block，这一级的指针block的每个元素都指向一个指针的数据block。示意图如下：<br><img src="/2022-04-10-13-39-39.png"></p>
+<h4 id="事务的提交"><a href="#事务的提交" class="headerlink" title="事务的提交"></a>事务的提交</h4><p>事务的提交是在<code>end_op</code>函数中完成的。在其内调用了commit函数，该函数定义如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">commit</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (<span class="built_in">log</span>.lh.n &gt; <span class="number">0</span>) &#123;</span><br><span class="line">    write_log();     <span class="comment">// Write modified blocks from cache to log</span></span><br><span class="line">    write_head();    <span class="comment">// Write header to disk -- the real commit</span></span><br><span class="line">    install_trans(<span class="number">0</span>); <span class="comment">// Now install writes to home locations</span></span><br><span class="line">    <span class="built_in">log</span>.lh.n = <span class="number">0</span>;</span><br><span class="line">    write_head();    <span class="comment">// Erase the transaction from the log</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>首先是<code>wirte_log</code>函数，该函数定义如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Copy modified blocks from cache to log.</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">write_log</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="keyword">int</span> tail;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">for</span> (tail = <span class="number">0</span>; tail &lt; <span class="built_in">log</span>.lh.n; tail++) &#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">to</span> =</span> bread(<span class="built_in">log</span>.dev, <span class="built_in">log</span>.start+tail+<span class="number">1</span>); <span class="comment">// log block</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">from</span> =</span> bread(<span class="built_in">log</span>.dev, <span class="built_in">log</span>.lh.block[tail]); <span class="comment">// cache block</span></span><br><span class="line">    memmove(to-&gt;data, from-&gt;data, BSIZE);</span><br><span class="line">    bwrite(to);  <span class="comment">// write the log</span></span><br><span class="line">    brelse(from);</span><br><span class="line">    brelse(to);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>该函数，主要作用是将在内存中的<code>buf</code>写到文件系统的<code>log</code>区中，为什么我肯定是内存中的<code>buf</code>呢，万一内存中的<code>buf</code>被写回到磁盘中呢，这是因为<code>bwrite</code>的代理函数，对<code>buf</code>执行了<code>bpin</code>操作，能够防止<code>buf</code>被驱逐，写回磁盘。</p>
+<p>执行完<code>wirte_log</code>之后，便是<code>write_head</code>函数，该函数的定义如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Write in-memory log header to disk.</span></span><br><span class="line"><span class="comment">// This is the true point at which the</span></span><br><span class="line"><span class="comment">// current transaction commits.</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">write_head</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">buf</span> =</span> bread(<span class="built_in">log</span>.dev, <span class="built_in">log</span>.start);</span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">logheader</span> *<span class="title">hb</span> =</span> (struct logheader *) (buf-&gt;data);</span><br><span class="line">  <span class="keyword">int</span> i;</span><br><span class="line">  hb-&gt;n = <span class="built_in">log</span>.lh.n;</span><br><span class="line">  <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; <span class="built_in">log</span>.lh.n; i++) &#123;</span><br><span class="line">    <span class="comment">//log.lh.block[] is in memory</span></span><br><span class="line">    hb-&gt;block[i] = <span class="built_in">log</span>.lh.block[i];</span><br><span class="line">  &#125;</span><br><span class="line">  bwrite(buf);</span><br><span class="line">  brelse(buf);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个函数将每一个buf应该写回到磁盘的位置对应的块号写到log区中。</p>
+<p>接下来的函数是<code>install_trans</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Copy committed blocks from log to their home location</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">install_trans</span><span class="params">(<span class="keyword">int</span> recovering)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="keyword">int</span> tail;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">for</span> (tail = <span class="number">0</span>; tail &lt; <span class="built_in">log</span>.lh.n; tail++) &#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">lbuf</span> =</span> bread(<span class="built_in">log</span>.dev, <span class="built_in">log</span>.start+tail+<span class="number">1</span>); <span class="comment">// read log block</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">dbuf</span> =</span> bread(<span class="built_in">log</span>.dev, <span class="built_in">log</span>.lh.block[tail]); <span class="comment">// read dst</span></span><br><span class="line">    memmove(dbuf-&gt;data, lbuf-&gt;data, BSIZE);  <span class="comment">// copy block to dst</span></span><br><span class="line">    bwrite(dbuf);  <span class="comment">// write dst to disk</span></span><br><span class="line">    <span class="keyword">if</span>(recovering == <span class="number">0</span>)</span><br><span class="line">      bunpin(dbuf);</span><br><span class="line">    brelse(lbuf);</span><br><span class="line">    brelse(dbuf);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>该函数将提交到事务之中的<code>buf</code>从<code>log</code>区写回到他们真正对应的地方，需要注意的是，现在这些buf仍然是在内存之中的。</p>
+<h4 id="为什么在系统crash之后，文件系统还能恢复？"><a href="#为什么在系统crash之后，文件系统还能恢复？" class="headerlink" title="为什么在系统crash之后，文件系统还能恢复？"></a>为什么在系统crash之后，文件系统还能恢复？</h4><p>在系统启动的时候，会执行<code>recover_from_log()</code>这个函数，该函数的定义如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">recover_from_log</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  read_head();</span><br><span class="line">  install_trans(<span class="number">1</span>); <span class="comment">// if committed, copy from log to disk</span></span><br><span class="line">  <span class="built_in">log</span>.lh.n = <span class="number">0</span>;</span><br><span class="line">  write_head(); <span class="comment">// clear the log</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>该函数首先执行<code>read_head</code>来获取log区中刚刚由<code>write_head</code>写入的磁盘号，将其读入内存中的<code>log.lh.block</code>中。然后再执行<code>install_trans</code>,这次不同于<code>commit</code>函数中的<code>install_trans</code>，本次<code>install_trans</code>的参数为1，表示执行恢复功能。需要特别注意的是，这一次执行<code>install_trans</code>的时候，由于断电，内存中已经没有相关数据了，这个时候，就只能去磁盘中的log区中读取(由<code>write_log</code>写入)。由于内存数据丢失，所以每一个<code>buf</code>对应的<code>refcnt</code>也不见了，所以不应该执行<code>bunpin</code>操作。这正是<code>install_trans</code>传入1时的操作。</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>文件系统还是很复杂的，花了很多时间去理解其中的思想。其中真正的难点应该是锁的使用，睡眠锁，自旋锁如何去安排才不会死锁，这也是文件系统的精妙所在，想要了解，可以去看xv6 book。这里不结合具体代码，也说不出什么来。不过本次实验还是很简单的，就算不了解xv6文件系统的全貌，也能做出来。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/xv6/" rel="tag"># xv6</a>
+              <a href="/tags/file-system/" rel="tag"># file system</a>
+              <a href="/tags/write-system-call/" rel="tag"># write system call</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/03/29/xv6-lock%E5%AE%9E%E9%AA%8C%E6%80%BB%E7%BB%93/" rel="prev" title="xv6 lock实验总结">
+      <i class="fa fa-chevron-left"></i> xv6 lock实验总结
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#xv6-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E5%88%86%E6%9E%90"><span class="nav-number">1.</span> <span class="nav-text">xv6 文件系统分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#write%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A8%E5%88%86%E6%9E%90"><span class="nav-number">1.2.</span> <span class="nav-text">write系统调用分析</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#xv6%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A8%E4%BC%A0%E5%8F%82%E5%8E%9F%E7%90%86"><span class="nav-number">1.2.1.</span> <span class="nav-text">xv6系统调用传参原理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#write"><span class="nav-number">1.2.2.</span> <span class="nav-text">write</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#bmap%E5%87%BD%E6%95%B0"><span class="nav-number">1.2.3.</span> <span class="nav-text">bmap函数</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#lab-%E5%A4%A7%E6%96%87%E4%BB%B6%E6%94%AF%E6%8C%81"><span class="nav-number">1.2.3.1.</span> <span class="nav-text">lab 大文件支持</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E7%9A%84%E6%8F%90%E4%BA%A4"><span class="nav-number">1.2.4.</span> <span class="nav-text">事务的提交</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E5%9C%A8%E7%B3%BB%E7%BB%9Fcrash%E4%B9%8B%E5%90%8E%EF%BC%8C%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E8%BF%98%E8%83%BD%E6%81%A2%E5%A4%8D%EF%BC%9F"><span class="nav-number">1.2.5.</span> <span class="nav-text">为什么在系统crash之后，文件系统还能恢复？</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">1.3.</span> <span class="nav-text">总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">John Doe</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">18</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">John Doe</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
