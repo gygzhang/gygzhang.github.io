@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="race condition在并发中，race condition是指结果依赖于多个线程之间的操作顺序。 解决方法 对数据加以保护 无锁算法 将数据的更新处理为事务  C++中最常见的数据保护机制是mutex 使用mutex保护数据在C++中使用mutex一般，mutex配合std::lock_guard使用： 12345678910111213141516#include &lt;list&amp;gt">
+<meta property="og:type" content="article">
+<meta property="og:title" content="C++多线程-线程间共享数据">
+<meta property="og:url" content="http://example.com/2022/07/27/C-%E5%A4%9A%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E9%97%B4%E5%85%B1%E4%BA%AB%E6%95%B0%E6%8D%AE/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="race condition在并发中，race condition是指结果依赖于多个线程之间的操作顺序。 解决方法 对数据加以保护 无锁算法 将数据的更新处理为事务  C++中最常见的数据保护机制是mutex 使用mutex保护数据在C++中使用mutex一般，mutex配合std::lock_guard使用： 12345678910111213141516#include &lt;list&amp;gt">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/img/2022-07-28-11-19-03.png">
+<meta property="article:published_time" content="2022-07-27T11:59:24.000Z">
+<meta property="article:modified_time" content="2022-08-02T02:45:49.405Z">
+<meta property="article:author" content="John Doe">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/img/2022-07-28-11-19-03.png">
+
+<link rel="canonical" href="http://example.com/2022/07/27/C-%E5%A4%9A%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E9%97%B4%E5%85%B1%E4%BA%AB%E6%95%B0%E6%8D%AE/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>C++多线程-线程间共享数据 | Hexo</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Hexo</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/07/27/C-%E5%A4%9A%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E9%97%B4%E5%85%B1%E4%BA%AB%E6%95%B0%E6%8D%AE/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          C++多线程-线程间共享数据
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-07-27 19:59:24" itemprop="dateCreated datePublished" datetime="2022-07-27T19:59:24+08:00">2022-07-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-08-02 10:45:49" itemprop="dateModified" datetime="2022-08-02T10:45:49+08:00">2022-08-02</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="race-condition"><a href="#race-condition" class="headerlink" title="race condition"></a>race condition</h2><p>在并发中，race condition是指结果依赖于多个线程之间的操作顺序。</p>
+<h2 id="解决方法"><a href="#解决方法" class="headerlink" title="解决方法"></a>解决方法</h2><ol>
+<li>对数据加以保护</li>
+<li>无锁算法</li>
+<li>将数据的更新处理为事务</li>
+</ol>
+<p>C++中最常见的数据保护机制是mutex</p>
+<h2 id="使用mutex保护数据"><a href="#使用mutex保护数据" class="headerlink" title="使用mutex保护数据"></a>使用mutex保护数据</h2><h3 id="在C-中使用mutex"><a href="#在C-中使用mutex" class="headerlink" title="在C++中使用mutex"></a>在C++中使用mutex</h3><p>一般，mutex配合std::lock_guard使用：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;list&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;mutex&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;algorithm&gt;</span></span></span><br><span class="line">std::list&lt;<span class="keyword">int</span>&gt; some_list;</span><br><span class="line">std::mutex some_mutex;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">add_to_list</span><span class="params">(<span class="keyword">int</span> new_value)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">guard</span><span class="params">(some_mutex)</span></span>;</span><br><span class="line">    some_list.<span class="built_in">push_back</span>(new_value);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">bool</span> <span class="title">list_contains</span><span class="params">(<span class="keyword">int</span> value_to_find)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">guard</span><span class="params">(some_mutex)</span></span>;</span><br><span class="line">    <span class="keyword">return</span> std::<span class="built_in">find</span>(some_list.<span class="built_in">begin</span>(),some_list.<span class="built_in">end</span>(),value_to_find)</span><br><span class="line">    != some_list.<span class="built_in">end</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="写一个线程安全的栈"><a href="#写一个线程安全的栈" class="headerlink" title="写一个线程安全的栈"></a>写一个线程安全的栈</h2><h3 id="为什么说std-stack不是线程安全的"><a href="#为什么说std-stack不是线程安全的" class="headerlink" title="为什么说std::stack不是线程安全的"></a>为什么说std::stack不是线程安全的</h3><p>问题的核心在于pop()操作和top()操作，之前在用stl刷题的时候，我就在曾经疑惑过，为什么不让pop()操作返回栈顶的元素呢？本科数据结构课上不就是让pop返回栈顶的元素吗？原因在于我们没考虑多线程和异常的产生。</p>
+<p>看下面的代码：<br><img src="/img/2022-07-28-11-19-03.png"><br>只考虑有这两个线程，他们依次执行了top获取了栈顶的元素，然后再依次执行了pop依次删除了栈里面两个相邻的元素。这显然和我们预期的执行结果不一致，所以这里产生了race condition。</p>
+<p>那怎么解决呢？ 我们可以想到用mutex来保护top和pop操作，但是这样也是有问题的：当储存对象的栈调用pop返回的时候，首先会修改stack数据结构，然后再返回一个对象，可能会调用复制构造函数(<a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/33795529/does-a-return-by-value-call-the-copy-constructor-or-the-copy-assignment-operator">why</a>)，如果这个复制构造函数扔出一个异常，比如内存不够(std::bad_alloc)，然后这个元素就直接丢失了(因为栈上也没这个对象了)。 所以stack的设计者，将这已操作分为top和pop：首先获取栈顶元素，然后再从栈顶移除该元素。这样的话，如果不能安全的复制栈顶元素，该元素将留在栈上。如果是内存不够，可能等一会又有内存了呢？</p>
+<blockquote>
+<p>参考： <a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/33795529/does-a-return-by-value-call-the-copy-constructor-or-the-copy-assignment-operator">c++ - Does a return by value call the copy constructor or the copy assignment operator? - Stack Overflow</a></p>
+</blockquote>
+<h3 id="如何避免top和pop带来的race-condition"><a href="#如何避免top和pop带来的race-condition" class="headerlink" title="如何避免top和pop带来的race condition"></a>如何避免top和pop带来的race condition</h3><h4 id="方法1：给pop传递一个引用"><a href="#方法1：给pop传递一个引用" class="headerlink" title="方法1：给pop传递一个引用"></a>方法1：给pop传递一个引用</h4><p>如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">std::vector&lt;<span class="keyword">int</span>&gt; result;</span><br><span class="line">some_stack.<span class="built_in">pop</span>(result);</span><br></pre></td></tr></table></figure>
+<p>缺点：需要pop之前构建对象。 而且也不现实，因为构造一个对象在时间或资源上是很昂贵的，对于其他类型来说，可能这个时候构造函数需要的参数也一定可用。 而且这种方法，需要储存的对象是可赋值的。然而许多用户定义的类可能没有提供赋值构造函数。</p>
+<h4 id="方法2：要求一个没有异常抛出的构造函数或者移动构造函数"><a href="#方法2：要求一个没有异常抛出的构造函数或者移动构造函数" class="headerlink" title="方法2：要求一个没有异常抛出的构造函数或者移动构造函数"></a>方法2：要求一个没有异常抛出的构造函数或者移动构造函数</h4><p>对于值返回的pop函数来说，只有一个异常安全的问题。所以可以要求使用线程安全的对象其复制构造函数不会抛出异常。</p>
+<p>这样的解决方案也不是理想的，因为会抛出异常和没有移动构造函数的用户定义的类要多一些。</p>
+<h4 id="方法3：返回一个指向要pop对象的指针"><a href="#方法3：返回一个指向要pop对象的指针" class="headerlink" title="方法3：返回一个指向要pop对象的指针"></a>方法3：返回一个指向要pop对象的指针</h4><p>返回一个指向对象的指针显然是不会抛出异常的。 但是缺点是我们需要一个方法来管理该对象的内存，而且对于简单的类型(比如int), 管理内存的开销要比直接返回值要大。</p>
+<p>如果要使用这种方案的话，std::share_ptr是一个很好的选择。这样不仅避免了内存泄露，同时内存分配是完全有标准库来掌控的。 但是我们需要为栈上的每个对象调用new， 和非线程安全的栈比起来，这是一个很大的开销。</p>
+<h4 id="方法4：（方法1-2）或者（方法1-3）"><a href="#方法4：（方法1-2）或者（方法1-3）" class="headerlink" title="方法4：（方法1+2）或者（方法1+3）"></a>方法4：（方法1+2）或者（方法1+3）</h4><p>对于泛型编程来说，灵活性很重要。</p>
+<h4 id="方法1-3"><a href="#方法1-3" class="headerlink" title="方法1+3"></a>方法1+3</h4><p>代码如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;exception&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;memory&gt;</span></span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">empty_stack</span>:</span> std::exception</span><br><span class="line">&#123;</span><br><span class="line">    <span class="function"><span class="keyword">const</span> <span class="keyword">char</span>* <span class="title">what</span><span class="params">()</span> <span class="keyword">const</span> <span class="title">throw</span><span class="params">()</span></span>;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="keyword">template</span>&lt;<span class="keyword">typename</span> T&gt;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">threadsafe_stack</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="built_in">threadsafe_stack</span>();</span><br><span class="line">    <span class="built_in">threadsafe_stack</span>(<span class="keyword">const</span> threadsafe_stack&amp;);</span><br><span class="line">    threadsafe_stack&amp; <span class="keyword">operator</span>=(<span class="keyword">const</span> threadsafe_stack&amp;) = <span class="keyword">delete</span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">push</span><span class="params">(T new_value)</span></span>;</span><br><span class="line">    <span class="function">std::shared_ptr&lt;T&gt; <span class="title">pop</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">pop</span><span class="params">(T&amp; value)</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">bool</span> <span class="title">empty</span><span class="params">()</span> <span class="keyword">const</span></span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>具体的实现如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;exception&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;memory&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;mutex&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stack&gt;</span></span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">empty_stack</span>:</span> std::exception</span><br><span class="line">&#123;</span><br><span class="line">    <span class="function"><span class="keyword">const</span> <span class="keyword">char</span>* <span class="title">what</span><span class="params">()</span> <span class="keyword">const</span> <span class="title">throw</span><span class="params">()</span></span>;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="keyword">template</span>&lt;<span class="keyword">typename</span> T&gt;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">threadsafe_stack</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">    std::stack&lt;T&gt; data;</span><br><span class="line">    <span class="keyword">mutable</span> std::mutex m;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="built_in">threadsafe_stack</span>()&#123;&#125;</span><br><span class="line">    <span class="built_in">threadsafe_stack</span>(<span class="keyword">const</span> threadsafe_stack&amp; other)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">lock</span><span class="params">(other.m)</span></span>;</span><br><span class="line">        data=other.data;</span><br><span class="line">    &#125;</span><br><span class="line">    threadsafe_stack&amp; <span class="keyword">operator</span>=(<span class="keyword">const</span> threadsafe_stack&amp;) = <span class="keyword">delete</span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">push</span><span class="params">(T new_value)</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">lock</span><span class="params">(m)</span></span>;</span><br><span class="line">        data.<span class="built_in">push</span>(new_value);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function">std::shared_ptr&lt;T&gt; <span class="title">pop</span><span class="params">()</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">lock</span><span class="params">(m)</span></span>;</span><br><span class="line">        <span class="keyword">if</span>(data.<span class="built_in">empty</span>()) <span class="keyword">throw</span> <span class="built_in">empty_stack</span>();</span><br><span class="line">        <span class="function">std::shared_ptr&lt;T&gt; <span class="keyword">const</span> <span class="title">res</span><span class="params">(std::make_shared&lt;T&gt;(data.top()))</span></span>;</span><br><span class="line">        data.<span class="built_in">pop</span>();</span><br><span class="line">        <span class="keyword">return</span> res;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">pop</span><span class="params">(T&amp; value)</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">lock</span><span class="params">(m)</span></span>;</span><br><span class="line">        <span class="keyword">if</span>(data.<span class="built_in">empty</span>()) <span class="keyword">throw</span> <span class="built_in">empty_stack</span>();</span><br><span class="line">        value=data.<span class="built_in">top</span>();</span><br><span class="line">        data.<span class="built_in">pop</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">bool</span> <span class="title">empty</span><span class="params">()</span> <span class="keyword">const</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">lock</span><span class="params">(m)</span></span>;</span><br><span class="line">        <span class="keyword">return</span> data.<span class="built_in">empty</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>上面这种实现将top和pop操作合二为一，从而避免了race condition。pop提供了两个重载过后的函数：</p>
+<ul>
+<li>如果pop没有提供参数，那么将返回一个std::share_ptr对象，因为我们返回的是一个指针，则对象的复制构造函数不会被调用，自然也避免了产生异常。</li>
+<li>如果pop提供了一个引用，则会在pop内调用对象的赋值构造函数，又因为赋值构造函数不会创造新的内存区域，而只是简单的赋值，这样就避免了异常的产生。</li>
+</ul>
+<p>我们可以看到，锁的粒度太小是产生race condition的原因，通过增大锁的粒度，我们成功的实现了一个线程安全的stack类。但是也不是锁的粒度越大就越好，以前linux在内核中就只用了一个锁，这样的后果就是一个4核的电脑性能还没单核的性能强。</p>
+<p>有的问题可以通过增加锁的粒度来解决，但是有时候还是需要更加细粒度的锁来保护数据，比如需要保护一个类的不同的对象。这时，要么把加锁这件事留给使用者，要么用一个单独的锁来锁住这个类的所有实例。</p>
+<p>当在一个操作中需要多个锁，这时候可能会带来新的问题：死锁。</p>
+<h3 id="死锁：-问题和解决方案"><a href="#死锁：-问题和解决方案" class="headerlink" title="死锁： 问题和解决方案"></a>死锁： 问题和解决方案</h3><p>一种办法是以相同的顺序加锁</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/07/27/C-%E5%A4%9A%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E9%97%B4%E8%B4%A1%E7%8C%AE%E6%95%B0%E6%8D%AE/" rel="prev" title="C++多线程-线程间贡献数据">
+      <i class="fa fa-chevron-left"></i> C++多线程-线程间贡献数据
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/08/02/notes-1/" rel="next" title="notes-1">
+      notes-1 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#race-condition"><span class="nav-number">1.</span> <span class="nav-text">race condition</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3%E6%96%B9%E6%B3%95"><span class="nav-number">2.</span> <span class="nav-text">解决方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8mutex%E4%BF%9D%E6%8A%A4%E6%95%B0%E6%8D%AE"><span class="nav-number">3.</span> <span class="nav-text">使用mutex保护数据</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%A8C-%E4%B8%AD%E4%BD%BF%E7%94%A8mutex"><span class="nav-number">3.1.</span> <span class="nav-text">在C++中使用mutex</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%99%E4%B8%80%E4%B8%AA%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8%E7%9A%84%E6%A0%88"><span class="nav-number">4.</span> <span class="nav-text">写一个线程安全的栈</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E8%AF%B4std-stack%E4%B8%8D%E6%98%AF%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8%E7%9A%84"><span class="nav-number">4.1.</span> <span class="nav-text">为什么说std::stack不是线程安全的</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E9%81%BF%E5%85%8Dtop%E5%92%8Cpop%E5%B8%A6%E6%9D%A5%E7%9A%84race-condition"><span class="nav-number">4.2.</span> <span class="nav-text">如何避免top和pop带来的race condition</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%96%B9%E6%B3%951%EF%BC%9A%E7%BB%99pop%E4%BC%A0%E9%80%92%E4%B8%80%E4%B8%AA%E5%BC%95%E7%94%A8"><span class="nav-number">4.2.1.</span> <span class="nav-text">方法1：给pop传递一个引用</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%96%B9%E6%B3%952%EF%BC%9A%E8%A6%81%E6%B1%82%E4%B8%80%E4%B8%AA%E6%B2%A1%E6%9C%89%E5%BC%82%E5%B8%B8%E6%8A%9B%E5%87%BA%E7%9A%84%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0%E6%88%96%E8%80%85%E7%A7%BB%E5%8A%A8%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0"><span class="nav-number">4.2.2.</span> <span class="nav-text">方法2：要求一个没有异常抛出的构造函数或者移动构造函数</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%96%B9%E6%B3%953%EF%BC%9A%E8%BF%94%E5%9B%9E%E4%B8%80%E4%B8%AA%E6%8C%87%E5%90%91%E8%A6%81pop%E5%AF%B9%E8%B1%A1%E7%9A%84%E6%8C%87%E9%92%88"><span class="nav-number">4.2.3.</span> <span class="nav-text">方法3：返回一个指向要pop对象的指针</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%96%B9%E6%B3%954%EF%BC%9A%EF%BC%88%E6%96%B9%E6%B3%951-2%EF%BC%89%E6%88%96%E8%80%85%EF%BC%88%E6%96%B9%E6%B3%951-3%EF%BC%89"><span class="nav-number">4.2.4.</span> <span class="nav-text">方法4：（方法1+2）或者（方法1+3）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%96%B9%E6%B3%951-3"><span class="nav-number">4.2.5.</span> <span class="nav-text">方法1+3</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%AD%BB%E9%94%81%EF%BC%9A-%E9%97%AE%E9%A2%98%E5%92%8C%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88"><span class="nav-number">4.3.</span> <span class="nav-text">死锁： 问题和解决方案</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">John Doe</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">John Doe</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

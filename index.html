@@ -145,6 +145,662 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/09/06/about-pimpl-you-should-know/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/09/06/about-pimpl-you-should-know/" class="post-title-link" itemprop="url">about pimpl, you should know...</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-09-06 22:39:19" itemprop="dateCreated datePublished" datetime="2022-09-06T22:39:19+08:00">2022-09-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-09-21 15:10:00" itemprop="dateModified" datetime="2022-09-21T15:10:00+08:00">2022-09-21</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="pimpl是什么"><a href="#pimpl是什么" class="headerlink" title="pimpl是什么"></a>pimpl是什么</h2><p>pimpl主要的目的是为了隐藏信息，我们的确可以在头文件中声明一个类，然后把定义藏到cpp文件中，但是这样还是不够安全，因为用户可能根据private里面的数据结构和私有函数猜到具体实现的思路。所以我们需要pimpl，p就是指指针，我们给用户看到的东西，就一个类，类里面是一个指向具体实现类的指针，具体实现类的实现全都放到cpp文件中。</p>
+<p>声明(用户可见):</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// test.hpp</span></span><br><span class="line"><span class="comment">//  Note that even though example::implementation is an incomplete type in</span></span><br><span class="line"><span class="comment">//  some translation units using this header, shared_ptr&lt; implementation &gt;</span></span><br><span class="line"><span class="comment">//  is still valid because the type is complete where it counts - in the</span></span><br><span class="line"><span class="comment">//  shared_ptr_example2.cpp translation unit where functions requiring a</span></span><br><span class="line"><span class="comment">//  complete type are actually instantiated.</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">example</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">  <span class="built_in">example</span>();</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">do_something</span><span class="params">()</span></span>;</span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">  <span class="class"><span class="keyword">class</span> <span class="title">implementation</span>;</span></span><br><span class="line">  boost::shared_ptr&lt; implementation &gt; _imp; <span class="comment">// hide implementation details</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>实现(用户不可见)：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&quot;shared_ptr_example2.hpp&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">example</span>:</span>:implementation</span><br><span class="line">&#123;</span><br><span class="line"> <span class="keyword">public</span>:</span><br><span class="line">  ~<span class="built_in">implementation</span>() &#123; std::cout &lt;&lt; <span class="string">&quot;destroying implementation\n&quot;</span>; &#125;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">example::<span class="built_in">example</span>() : _imp( <span class="keyword">new</span> implementation ) &#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">example::do_something</span><span class="params">()</span></span></span><br><span class="line"><span class="function">  </span>&#123; std::cout &lt;&lt; <span class="string">&quot;use_count() is &quot;</span> &lt;&lt; _imp.<span class="built_in">use_count</span>() &lt;&lt; <span class="string">&quot;\n&quot;</span>; &#125;</span><br></pre></td></tr></table></figure>
+
+<p>用户使用：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">#include &quot;shared_ptr_example2.hpp&quot;</span><br><span class="line"></span><br><span class="line">int main()</span><br><span class="line">&#123;</span><br><span class="line">  example a;</span><br><span class="line">  a.do_something();</span><br><span class="line">  example b(a);</span><br><span class="line">  b.do_something();</span><br><span class="line">  example c;</span><br><span class="line">  c = a;</span><br><span class="line">  c.do_something();</span><br><span class="line">  return 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>但是这样似乎感觉哪里不对：implementation类是一个imcomplete type，我们可以在这里使用它吗？ 是的，可以。<br>上面给的注释解释了原因，这里的boost::shared_ptr储存的不过是一个指针，一个指针的长度是固定的，因此编译器可以编译通过。</p>
+<h2 id="为什么用shared-ptr来持有implementation类呢？"><a href="#为什么用shared-ptr来持有implementation类呢？" class="headerlink" title="为什么用shared_ptr来持有implementation类呢？"></a>为什么用shared_ptr来持有implementation类呢？</h2><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">A</span>;</span></span><br><span class="line">A* a = ...;</span><br><span class="line"><span class="keyword">delete</span> a;</span><br></pre></td></tr></table></figure>
+<p>上面的代码可能会导致未定义行为，如果幸运，程序会崩溃，更糟糕的是可能会产生内存泄露，因为析构函数不会被调用。</p>
+<p>我们可以看下面的例子：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;memory&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">A</span> ;</span> <span class="comment">// declare A: A is an incomplete type at this point</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">( A* ptr )</span> <span class="comment">// ptr is a pointer to an incomplete type at this point</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="comment">// LLVM clang++: *** warning: deleting pointer to incomplete type &#x27;A&#x27; may cause undefined behavior</span></span><br><span class="line">    <span class="comment">//                   note: forward declaration of &#x27;A&#x27; (line 3)</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// GNU g++     :     *** warning: possible problem detected in invocation of delete operator</span></span><br><span class="line">    <span class="comment">//                   *** warning: &#x27;ptr&#x27; has incomplete type</span></span><br><span class="line">    <span class="comment">//                   note: forward declaration of &#x27;struct A&#x27; (line 3)</span></span><br><span class="line">    <span class="comment">//                   note: neither the destructor nor the class-specific operator delete will be called, even if they are declared when the class is defined</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// Microsoft cl: *** warning: deletion of pointer to incomplete type &#x27;A&#x27;; no destructor called</span></span><br><span class="line">    <span class="comment">//                   note: see declaration of &#x27;A&#x27; (line 3)</span></span><br><span class="line">    <span class="keyword">delete</span> ptr ; </span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// get a compile-time error if you try to use the smart pointer with an </span></span><br><span class="line"><span class="comment">// incomplete type at that point. no more UB</span></span><br><span class="line"><span class="comment">// void foo2( std::shared_ptr&lt;A&gt; sb )</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">A</span> &#123;</span> </span><br><span class="line">    <span class="keyword">int</span> *i;</span><br><span class="line">    <span class="built_in">A</span>():<span class="built_in">i</span>(<span class="keyword">new</span> <span class="keyword">int</span>)&#123;&#125;</span><br><span class="line">    ~<span class="built_in">A</span>()&#123;std::cout&lt;&lt;<span class="string">&quot;~A\n&quot;</span>;&#125;</span><br><span class="line">    </span><br><span class="line">&#125;; <span class="comment">// define A: A is a complete type at this point</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">bar</span><span class="params">( A* ptr )</span> <span class="comment">// // ptr is a pointer to a complete type at this point</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">delete</span> ptr ; <span class="comment">// this is fine</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    A *a = <span class="keyword">new</span> <span class="built_in">A</span>();</span><br><span class="line">    <span class="built_in">foo</span>(a);</span><br><span class="line">    A *b = <span class="keyword">new</span> <span class="built_in">A</span>();</span><br><span class="line">    <span class="built_in">bar</span>(b);</span><br><span class="line">    <span class="comment">// you can&#x27;t instantiated here, </span></span><br><span class="line">    <span class="comment">//std::shared_ptr&lt;A&gt; sb = new A();</span></span><br><span class="line">    <span class="comment">//foo2(sb);</span></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这个例子更加直观，当编译器编译到foo函数的时候，A是一个imcomplete type，ptr是一个指针，指向imcomplete type，delete这个指针，会造成内存泄露(A的变量i指向的堆上的内存)，因为这个时候我们不知道A这个类的任何信息，自然也不知道deconstructer了。 而bar就会调用A的deconstructer，因为编译到bar函数的时候，A已经是一个complete type了，自然可以调用其析构函数。<br>根据godbolt产生的汇编代码可以证明这一点：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">foo</span>(A*):</span><br><span class="line">        push    rbp</span><br><span class="line">        mov     rbp, rsp</span><br><span class="line">        sub     rsp, <span class="number">16</span></span><br><span class="line">        mov     QWORD PTR [rbp<span class="number">-8</span>], rdi</span><br><span class="line">        mov     rax, QWORD PTR [rbp<span class="number">-8</span>]</span><br><span class="line">        test    rax, rax</span><br><span class="line">        je      .L3</span><br><span class="line">        mov     rdi, <span class="function">rax</span></span><br><span class="line"><span class="function">        call    <span class="keyword">operator</span> <span class="title">delete</span><span class="params">(<span class="keyword">void</span>*)</span></span></span><br><span class="line"><span class="function">.L3:</span></span><br><span class="line"><span class="function">        nop</span></span><br><span class="line"><span class="function">        leave</span></span><br><span class="line"><span class="function">        ret</span></span><br><span class="line"><span class="function">.LC0:</span></span><br><span class="line"><span class="function">        .string <span class="string">&quot;~A\n&quot;</span></span></span><br><span class="line"><span class="function">A::~A() [base object destructor]:</span></span><br><span class="line"><span class="function">        push    rbp</span></span><br><span class="line"><span class="function">        mov     rbp, rsp</span></span><br><span class="line"><span class="function">        sub     rsp, <span class="number">16</span></span></span><br><span class="line"><span class="function">        mov     QWORD PTR [rbp<span class="number">-8</span>], rdi</span></span><br><span class="line"><span class="function">        mov     esi, OFFSET FLAT:.LC0</span></span><br><span class="line"><span class="function">        mov     edi, OFFSET FLAT:_ZSt4cout</span></span><br><span class="line"><span class="function">        call    std::basic_ostream&lt;char, std::char_traits&lt;char&gt; &gt;&amp; std::operator&lt;&lt; &lt;std::char_traits&lt;char&gt; &gt;(std::basic_ostream&lt;char, std::char_traits&lt;char&gt; &gt;&amp;, char const*)</span></span><br><span class="line"><span class="function">        nop</span></span><br><span class="line"><span class="function">        leave</span></span><br><span class="line"><span class="function">        ret</span></span><br><span class="line"><span class="function">bar(A*):</span></span><br><span class="line"><span class="function">        push    rbp</span></span><br><span class="line"><span class="function">        mov     rbp, rsp</span></span><br><span class="line"><span class="function">        push    rbx</span></span><br><span class="line"><span class="function">        sub     rsp, <span class="number">24</span></span></span><br><span class="line"><span class="function">        mov     QWORD PTR [rbp<span class="number">-24</span>], rdi</span></span><br><span class="line"><span class="function">        mov     rbx, QWORD PTR [rbp<span class="number">-24</span>]</span></span><br><span class="line"><span class="function">        test    rbx, rbx</span></span><br><span class="line"><span class="function">        je      .L7</span></span><br><span class="line"><span class="function">        mov     rdi, rbx</span></span><br><span class="line"><span class="function">        call    A::~A() [complete object destructor]</span></span><br><span class="line"><span class="function">        mov     esi, <span class="number">1</span></span></span><br><span class="line"><span class="function">        mov     rdi, rbx</span></span><br><span class="line"><span class="function">        call    operator delete(void*, unsigned long)</span></span><br><span class="line"><span class="function">.L7:</span></span><br><span class="line"><span class="function">        nop</span></span><br><span class="line"><span class="function">        mov     rbx, QWORD PTR [rbp<span class="number">-8</span>]</span></span><br><span class="line"><span class="function">        leave</span></span><br><span class="line"><span class="function">        ret</span></span><br><span class="line"><span class="function">main:</span></span><br><span class="line"><span class="function">        push    rbp</span></span><br><span class="line"><span class="function">        mov     rbp, rsp</span></span><br><span class="line"><span class="function">        sub     rsp, <span class="number">16</span></span></span><br><span class="line"><span class="function">        mov     edi, <span class="number">1</span></span></span><br><span class="line"><span class="function">        call    operator new(unsigned long)</span></span><br><span class="line"><span class="function">        mov     QWORD PTR [rbp<span class="number">-8</span>], rax</span></span><br><span class="line"><span class="function">        mov     rax, QWORD PTR [rbp<span class="number">-8</span>]</span></span><br><span class="line"><span class="function">        mov     rdi, rax</span></span><br><span class="line"><span class="function">        call    foo(A*)</span></span><br><span class="line"><span class="function">        mov     edi, <span class="number">1</span></span></span><br><span class="line"><span class="function">        call    operator new(unsigned long)</span></span><br><span class="line"><span class="function">        mov     QWORD PTR [rbp<span class="number">-16</span>], rax</span></span><br><span class="line"><span class="function">        mov     rax, QWORD PTR [rbp<span class="number">-16</span>]</span></span><br><span class="line"><span class="function">        mov     rdi, rax</span></span><br><span class="line"><span class="function">        call    bar(A*)</span></span><br><span class="line"><span class="function">        mov     eax, <span class="number">0</span></span></span><br><span class="line"><span class="function">        leave</span></span><br><span class="line"><span class="function">        ret</span></span><br><span class="line"><span class="function">__static_initialization_and_destruction_0(int, int):</span></span><br><span class="line"><span class="function">        push    rbp</span></span><br><span class="line"><span class="function">        mov     rbp, rsp</span></span><br><span class="line"><span class="function">        sub     rsp, <span class="number">16</span></span></span><br><span class="line"><span class="function">        mov     DWORD PTR [rbp<span class="number">-4</span>], edi</span></span><br><span class="line"><span class="function">        mov     DWORD PTR [rbp<span class="number">-8</span>], esi</span></span><br><span class="line"><span class="function">        cmp     DWORD PTR [rbp<span class="number">-4</span>], <span class="number">1</span></span></span><br><span class="line"><span class="function">        jne     .L12</span></span><br><span class="line"><span class="function">        cmp     DWORD PTR [rbp<span class="number">-8</span>], <span class="number">65535</span></span></span><br><span class="line"><span class="function">        jne     .L12</span></span><br><span class="line"><span class="function">        mov     edi, OFFSET FLAT:_ZStL8__ioinit</span></span><br><span class="line"><span class="function">        call    std::ios_base::Init::Init() [complete object constructor]</span></span><br><span class="line"><span class="function">        mov     edx, OFFSET FLAT:__dso_handle</span></span><br><span class="line"><span class="function">        mov     esi, OFFSET FLAT:_ZStL8__ioinit</span></span><br><span class="line"><span class="function">        mov     edi, OFFSET FLAT:_ZNSt8ios_base4InitD1Ev</span></span><br><span class="line"><span class="function">        call    __cxa_atexit</span></span><br><span class="line"><span class="function">.L12:</span></span><br><span class="line"><span class="function">        nop</span></span><br><span class="line"><span class="function">        leave</span></span><br><span class="line"><span class="function">        ret</span></span><br><span class="line"><span class="function">_GLOBAL__sub_I_foo(A*):</span></span><br><span class="line"><span class="function">        push    rbp</span></span><br><span class="line"><span class="function">        mov     rbp, rsp</span></span><br><span class="line"><span class="function">        mov     esi, <span class="number">65535</span></span></span><br><span class="line"><span class="function">        mov     edi, <span class="number">1</span></span></span><br><span class="line"><span class="function">        call    __static_initialization_and_destruction_0(int, int)</span></span><br><span class="line"><span class="function">        pop     rbp</span></span><br><span class="line"><span class="function">        ret</span></span><br></pre></td></tr></table></figure>
+
+<p>这是一个UB(未定义行为)，如何避免呢</p>
+<p>如何避免这个UB呢，答案是使用智能指针，当有必要使用一个完整类型的时候，使用智能指针会得到一个编译错误，从来帮助我们避免UB。</p>
+<p>参考：</p>
+<p><a target="_blank" rel="noopener" href="https://cs.brown.edu/~jwicks/boost/libs/smart_ptr/shared_ptr.htm">shared_ptr</a></p>
+<p><a target="_blank" rel="noopener" href="https://howardhinnant.github.io/incomplete.html">Incomplete Types</a></p>
+<p><a target="_blank" rel="noopener" href="https://cplusplus.com/forum/beginner/227343/">C4150 deletion of pointer to incomplete - C++ Forum
+</a></p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/08/02/notes-1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/08/02/notes-1/" class="post-title-link" itemprop="url">notes-1</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-08-02 10:45:26" itemprop="dateCreated datePublished" datetime="2022-08-02T10:45:26+08:00">2022-08-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-12-03 21:48:25" itemprop="dateModified" datetime="2022-12-03T21:48:25+08:00">2022-12-03</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="C"><a href="#C" class="headerlink" title="C++"></a>C++</h2><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">A</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">	<span class="built_in">A</span>() &#123; std::cout &lt;&lt; <span class="string">&quot;default constructer: &quot;</span>&lt;&lt;<span class="keyword">this</span>&lt;&lt;<span class="string">&quot;\n&quot;</span>; &#125; <span class="comment">// 1</span></span><br><span class="line">	<span class="built_in">A</span>(<span class="keyword">const</span> A&amp; a) &#123; std::cout &lt;&lt; <span class="string">&quot;copy constructer: &quot;</span> &lt;&lt; <span class="keyword">this</span> &lt;&lt; <span class="string">&quot;\n&quot;</span>; &#125;<span class="comment">// 2</span></span><br><span class="line">	<span class="built_in">A</span>(A&amp;&amp; a) &#123; std::cout &lt;&lt; <span class="string">&quot;move constructer: &quot;</span> &lt;&lt; <span class="keyword">this</span> &lt;&lt; <span class="string">&quot;\n&quot;</span>; &#125;<span class="comment">// 3</span></span><br><span class="line"></span><br><span class="line">	~<span class="built_in">A</span>() &#123; std::cout &lt;&lt; <span class="string">&quot;de-constructer: &quot;</span> &lt;&lt; <span class="keyword">this</span> &lt;&lt; <span class="string">&quot;\n&quot;</span>; &#125; <span class="comment">// 4</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="function">A <span class="title">test1</span><span class="params">(A a)</span> </span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">return</span> a;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	A a;</span><br><span class="line">	<span class="built_in">test1</span>(a);</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>the output?</p>
+<p>在函数里面的对象，函数退出的时候对象会被销毁，所以一定会构造一个新的对象，而且一个对象反正要销毁了，不如用移动构造函数偷一点资源(比如堆上的)</p>
+<h3 id="make-shared"><a href="#make-shared" class="headerlink" title="make_shared"></a>make_shared</h3><p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/20895648/difference-in-make-shared-and-normal-shared-ptr-in-c">c++11 - Difference in make_shared and normal shared_ptr in C++ - Stack Overflow</a></p>
+<h2 id="gdb"><a href="#gdb" class="headerlink" title="gdb"></a>gdb</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">set disassemble-next-line on</span><br></pre></td></tr></table></figure>
+
+<h2 id="内联汇编"><a href="#内联汇编" class="headerlink" title="内联汇编"></a>内联汇编</h2><p><a target="_blank" rel="noopener" href="https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html">Extended Asm (Using the GNU Compiler Collection (GCC))</a></p>
+<h2 id="代码粘贴"><a href="#代码粘贴" class="headerlink" title="代码粘贴"></a>代码粘贴</h2><p><a target="_blank" rel="noopener" href="https://www.regendus.com/best-pastebin-alternatives/">7 Best Pastebin Alternatives and Similar Sites in 2022 - REGENDUS</a></p>
+<h2 id="C-1"><a href="#C-1" class="headerlink" title="C++"></a>C++</h2><ol>
+<li><p>std::weak_ptr主要解决的问题是dangling pointer（指向的对象被delete了）和循环引用<br><a target="_blank" rel="noopener" href="https://www.nextptr.com/tutorial/ta1382183122/using-weak_ptr-for-circular-references">C++ | Using weak_ptr for circular references - nextptr</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/12030650/when-is-stdweak-ptr-useful">c++11 - When is std::weak_ptr useful? - Stack Overflow</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/41871115/why-would-i-stdmove-an-stdshared-ptr">c++ - Why would I std::move an std::shared_ptr? - Stack Overflow</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/35603437/can-an-rvalue-be-moved-into-a-shared-ptr">c++ - Can an rvalue be moved into a shared_ptr - Stack Overflow</a></p>
+</li>
+</ol>
+<ol start="5">
+<li><p>从函数返回一个局部对象，会在caller堆栈中调用复制构造函数。但是这个步骤可以被省略，叫做copy elision。<br><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/6350882/c-return-local-object">C++ return local object - Stack Overflow</a><br><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/12953127/what-are-copy-elision-and-return-value-optimization/12953145#12953145">c++ - What are copy elision and return value optimization? - Stack Overflow</a></p>
+</li>
+<li><p>间接调用（通过指向函数的指针）要比直接调用慢3.4倍<br><a target="_blank" rel="noopener" href="https://gist.github.com/rianhunter/0be8dc116b120ad5fdd4">Indirect vs Direct Function Call Overhead in C/C++</a></p>
+</li>
+<li><p>当unique_ptr管理的对象不是一个对象时，需要传递一个一个自定义的deleter。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">deleted_unique_ptr&lt;FILE&gt; <span class="title">file</span><span class="params">(</span></span></span><br><span class="line"><span class="params"><span class="function">    fopen(<span class="string">&quot;file.txt&quot;</span>, <span class="string">&quot;r&quot;</span>),</span></span></span><br><span class="line"><span class="params"><span class="function">    [](FILE* f) &#123; fclose(f); &#125;)</span></span>;</span><br></pre></td></tr></table></figure>
+<p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/19053351/how-do-i-use-a-custom-deleter-with-a-stdunique-ptr-member">c++ - How do I use a custom deleter with a std::unique_ptr member? - Stack Overflow</a></p>
+</li>
+</ol>
+<ol start="8">
+<li>reserse 导致程序奔溃</li>
+</ol>
+<p>如下代码会造成程序奔溃:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">std::vector&lt;<span class="keyword">int</span>&gt; vec;</span><br><span class="line">vec.<span class="built_in">reserse</span>(<span class="number">10</span>);</span><br><span class="line">vec[<span class="number">0</span>] = <span class="number">1</span>;</span><br></pre></td></tr></table></figure>
+<p>错误原因在于vector的reverse函数只改变vector的capacity但是它的size并不会改变。<br>size和capacity的区别:</p>
+<ul>
+<li>size是vector中当前包含的元素个数</li>
+<li>capacity是vector的最大可容纳的元素</li>
+</ul>
+<p>上面的代码调用reserve之后，vector中时没有元素的，因此如果对vec使用下标操作符，在msvc编译器中将导致如下的错误：</p>
+<p><img src="/../imgs/2022-12-03-21-45-50.png"></p>
+<p>正确的方式为:</p>
+<ul>
+<li>使用push_back/insert向容器中添加新元素，而不是用下标</li>
+<li>或者将reserve替换为resize</li>
+</ul>
+<p>vector的reserve和resize - 李大嘴 - 博客园<br><a target="_blank" rel="noopener" href="https://www.cnblogs.com/qlee/archive/2011/05/16/2048026.html">https://www.cnblogs.com/qlee/archive/2011/05/16/2048026.html</a></p>
+<h2 id="并发"><a href="#并发" class="headerlink" title="并发"></a>并发</h2><h2 id="网络"><a href="#网络" class="headerlink" title="网络"></a>网络</h2><h3 id="在epoll中为什么用ET-NONBLOCKING"><a href="#在epoll中为什么用ET-NONBLOCKING" class="headerlink" title="在epoll中为什么用ET+NONBLOCKING"></a>在epoll中为什么用ET+NONBLOCKING</h3><ol>
+<li>边缘触发只在第一次数据到达的时候通知wait，如果这次没读完，后面也不会通知wait(LT只要缓冲区中有数据就会通知wait)。 对于ET+BLOCKING，如果一个socket一次来了很多数据，一次没读完，这个时候就会从recv或者read返回，如果后面还有数据来还好，如果没数据再来，程序一直阻塞在wait调用，剩下的数据就会一直停留在socket的缓冲区中等待读取。那能不能一次把数据读完呢，这个时候就会出现新的问题，阻塞读可能会花费很长的时间，这样就没机会处理epoll中的其他事件了。使用非阻塞读取的话，<a target="_blank" rel="noopener" href="https://copyconstruct.medium.com/nonblocking-i-o-99948ad7c957">读操作会立即返回(即使数据没有完全被读出来)</a>。这样就可以去处理epoll的其他事件了。</li>
+<li>假设一个消息要读三次才能读完，在阻塞IO里要注意，epoll只会通知有数据可以读，但是不会通知可以读多少，所以只能读取一次，然后等待下一次epoll_wait通知下一次读取事件。可能我们会想，为什么不用循环读呢，原因是因为我们不知道到底有多少数据要读，不知道要读多少次，while循环的话，本来只需要读三次就能读完，那么第四次循环就会阻塞。而非阻塞采用这种方案就不会出现这种情况，因为没数据读的时候会直接返回-1，并设置errno为EAGAIN或者EWOULDBLOCK。</li>
+<li>还有就是对于select来说，man select里面bug节说一：<br>Under Linux, select() may report a socket file descriptor as “ready for reading”, while nevertheless a subsequent read blocks.  This could for example happen when       data has arrived but upon examination has wrong checksum and is discarded.  There may be other circumstances in which a file descriptor is spuriously reported  as       ready.  Thus it may be safer to use O_NONBLOCK on sockets that should not block.</li>
+</ol>
+<h3 id="使用Linux-epoll模型的LT水平触发模式，当socket可写时，会不停的触发socket可写的事件，如何处理？"><a href="#使用Linux-epoll模型的LT水平触发模式，当socket可写时，会不停的触发socket可写的事件，如何处理？" class="headerlink" title="使用Linux epoll模型的LT水平触发模式，当socket可写时，会不停的触发socket可写的事件，如何处理？"></a>使用Linux epoll模型的LT水平触发模式，当socket可写时，会不停的触发socket可写的事件，如何处理？</h3><p>网络流传的腾讯面试题<br>这道题目对LT和ET考察比较深入，验证了前文说的LT模式write问题。</p>
+<p>普通做法：</p>
+<p>当需要向socket写数据时，将该socket加入到epoll等待可写事件。接收到socket可写事件后，调用write()或send()发送数据，当数据全部写完后， 将socket描述符移出epoll列表，这种做法需要反复添加和删除。</p>
+<p>改进做法:</p>
+<p>向socket写数据时直接调用send()发送，当send()返回错误码EAGAIN，才将socket加入到epoll，等待可写事件后再发送数据，全部数据发送完毕，再移出epoll模型，改进的做法相当于认为socket在大部分时候是可写的(小数据)，不能写了再让epoll帮忙监控(数据太大了触发EAGAIN)。</p>
+<pre><code>当客户通过Socket提供的send函数发送大的数据包时，就可能返回一个EGGAIN的错误。该错误产生的原因是由于send 函数中的size变量大小超过了tcp_sendspace的值。
+</code></pre>
+<h2 id="misc"><a href="#misc" class="headerlink" title="misc"></a>misc</h2><h3 id="ANSI，unicode和utf-8的关系"><a href="#ANSI，unicode和utf-8的关系" class="headerlink" title="ANSI，unicode和utf-8的关系"></a>ANSI，unicode和utf-8的关系</h3><p><a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000003493738">编码基础概念:ANSI和unicode - SegmentFault 思否</a></p>
+<h2 id="循环引用的解释"><a href="#循环引用的解释" class="headerlink" title="循环引用的解释"></a>循环引用的解释</h2><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Person</span> &#123;</span></span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">		std::shared_ptr&lt;Person&gt; best_friend;</span><br><span class="line">		<span class="built_in">Person</span>() &#123; std::cout &lt;&lt; <span class="string">&quot;ctor &quot;</span> &lt;&lt; <span class="keyword">this</span> &lt;&lt; std::endl; &#125;</span><br><span class="line">		~<span class="built_in">Person</span>() &#123; std::cout &lt;&lt; <span class="string">&quot;dtor &quot;</span> &lt;&lt; <span class="keyword">this</span> &lt;&lt; std::endl; &#125;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">auto</span> pa = std::make_shared&lt;Person&gt;();</span><br><span class="line">	<span class="keyword">auto</span> pb = std::make_shared&lt;Person&gt;();</span><br><span class="line">	pa-&gt;best_friend = pb;</span><br><span class="line">	pb-&gt;best_friend = pa;</span><br><span class="line">&#125;<span class="comment">//1</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<pre><code>上面的析构函数一个都不会打印。当离开1的时候，pa是一个智能指针，它会查看它自己的ref count，发现是2（pa和pb-&gt;best_friend都指向同一个对象），所以它的ref count减一，但并不销毁pa指向的对象。pb也是一样，他们各自离开1之后，pa和pb指向的std::shared_ptr&lt;Person&gt;对象的ref count都是1，因此，发生了内存泄露。 
+
+如果我们把best_friend的类型改写成std::weak_ptr&lt;Person&gt;就不会出现上述的问题，因此weak_ptr指向一个shared对象并不会使该对象的ref count计数加一。weak_ptr只是拥有使用权，但并不拥有管理权。
+</code></pre>
+<p>Even if both pa and pb are deconstructed out of scope, the memory will not be released. Why? After pa leaves the scope, the only pointer object of pa has actually died, but the object pointed to by pa has not died, because at this time one of pb can only point to this object. After pb leaves the scope, the smart pointer pb is actually finished, but the object pointed to by pb is not dead, because there is still a pointer to it in the object pointed to by pa. Finally, because the two objects hold pointers to each other, their reference counts are both 1, which makes the memory unable to be released. </p>
+<p>After understanding the implementation principle of smart pointers and the principle of memory leaks caused by circular references, use</p>
+<p>weak_ptr<br>This kind of weak pointer that does not increase the reference count can solve this problem well.</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/07/27/C-%E5%A4%9A%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E9%97%B4%E5%85%B1%E4%BA%AB%E6%95%B0%E6%8D%AE/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/07/27/C-%E5%A4%9A%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E9%97%B4%E5%85%B1%E4%BA%AB%E6%95%B0%E6%8D%AE/" class="post-title-link" itemprop="url">C++多线程-线程间共享数据</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-07-27 19:59:24" itemprop="dateCreated datePublished" datetime="2022-07-27T19:59:24+08:00">2022-07-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-08-02 10:45:49" itemprop="dateModified" datetime="2022-08-02T10:45:49+08:00">2022-08-02</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="race-condition"><a href="#race-condition" class="headerlink" title="race condition"></a>race condition</h2><p>在并发中，race condition是指结果依赖于多个线程之间的操作顺序。</p>
+<h2 id="解决方法"><a href="#解决方法" class="headerlink" title="解决方法"></a>解决方法</h2><ol>
+<li>对数据加以保护</li>
+<li>无锁算法</li>
+<li>将数据的更新处理为事务</li>
+</ol>
+<p>C++中最常见的数据保护机制是mutex</p>
+<h2 id="使用mutex保护数据"><a href="#使用mutex保护数据" class="headerlink" title="使用mutex保护数据"></a>使用mutex保护数据</h2><h3 id="在C-中使用mutex"><a href="#在C-中使用mutex" class="headerlink" title="在C++中使用mutex"></a>在C++中使用mutex</h3><p>一般，mutex配合std::lock_guard使用：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;list&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;mutex&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;algorithm&gt;</span></span></span><br><span class="line">std::list&lt;<span class="keyword">int</span>&gt; some_list;</span><br><span class="line">std::mutex some_mutex;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">add_to_list</span><span class="params">(<span class="keyword">int</span> new_value)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">guard</span><span class="params">(some_mutex)</span></span>;</span><br><span class="line">    some_list.<span class="built_in">push_back</span>(new_value);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">bool</span> <span class="title">list_contains</span><span class="params">(<span class="keyword">int</span> value_to_find)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">guard</span><span class="params">(some_mutex)</span></span>;</span><br><span class="line">    <span class="keyword">return</span> std::<span class="built_in">find</span>(some_list.<span class="built_in">begin</span>(),some_list.<span class="built_in">end</span>(),value_to_find)</span><br><span class="line">    != some_list.<span class="built_in">end</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="写一个线程安全的栈"><a href="#写一个线程安全的栈" class="headerlink" title="写一个线程安全的栈"></a>写一个线程安全的栈</h2><h3 id="为什么说std-stack不是线程安全的"><a href="#为什么说std-stack不是线程安全的" class="headerlink" title="为什么说std::stack不是线程安全的"></a>为什么说std::stack不是线程安全的</h3><p>问题的核心在于pop()操作和top()操作，之前在用stl刷题的时候，我就在曾经疑惑过，为什么不让pop()操作返回栈顶的元素呢？本科数据结构课上不就是让pop返回栈顶的元素吗？原因在于我们没考虑多线程和异常的产生。</p>
+<p>看下面的代码：<br><img src="/img/2022-07-28-11-19-03.png"><br>只考虑有这两个线程，他们依次执行了top获取了栈顶的元素，然后再依次执行了pop依次删除了栈里面两个相邻的元素。这显然和我们预期的执行结果不一致，所以这里产生了race condition。</p>
+<p>那怎么解决呢？ 我们可以想到用mutex来保护top和pop操作，但是这样也是有问题的：当储存对象的栈调用pop返回的时候，首先会修改stack数据结构，然后再返回一个对象，可能会调用复制构造函数(<a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/33795529/does-a-return-by-value-call-the-copy-constructor-or-the-copy-assignment-operator">why</a>)，如果这个复制构造函数扔出一个异常，比如内存不够(std::bad_alloc)，然后这个元素就直接丢失了(因为栈上也没这个对象了)。 所以stack的设计者，将这已操作分为top和pop：首先获取栈顶元素，然后再从栈顶移除该元素。这样的话，如果不能安全的复制栈顶元素，该元素将留在栈上。如果是内存不够，可能等一会又有内存了呢？</p>
+<blockquote>
+<p>参考： <a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/33795529/does-a-return-by-value-call-the-copy-constructor-or-the-copy-assignment-operator">c++ - Does a return by value call the copy constructor or the copy assignment operator? - Stack Overflow</a></p>
+</blockquote>
+<h3 id="如何避免top和pop带来的race-condition"><a href="#如何避免top和pop带来的race-condition" class="headerlink" title="如何避免top和pop带来的race condition"></a>如何避免top和pop带来的race condition</h3><h4 id="方法1：给pop传递一个引用"><a href="#方法1：给pop传递一个引用" class="headerlink" title="方法1：给pop传递一个引用"></a>方法1：给pop传递一个引用</h4><p>如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">std::vector&lt;<span class="keyword">int</span>&gt; result;</span><br><span class="line">some_stack.<span class="built_in">pop</span>(result);</span><br></pre></td></tr></table></figure>
+<p>缺点：需要pop之前构建对象。 而且也不现实，因为构造一个对象在时间或资源上是很昂贵的，对于其他类型来说，可能这个时候构造函数需要的参数也一定可用。 而且这种方法，需要储存的对象是可赋值的。然而许多用户定义的类可能没有提供赋值构造函数。</p>
+<h4 id="方法2：要求一个没有异常抛出的构造函数或者移动构造函数"><a href="#方法2：要求一个没有异常抛出的构造函数或者移动构造函数" class="headerlink" title="方法2：要求一个没有异常抛出的构造函数或者移动构造函数"></a>方法2：要求一个没有异常抛出的构造函数或者移动构造函数</h4><p>对于值返回的pop函数来说，只有一个异常安全的问题。所以可以要求使用线程安全的对象其复制构造函数不会抛出异常。</p>
+<p>这样的解决方案也不是理想的，因为会抛出异常和没有移动构造函数的用户定义的类要多一些。</p>
+<h4 id="方法3：返回一个指向要pop对象的指针"><a href="#方法3：返回一个指向要pop对象的指针" class="headerlink" title="方法3：返回一个指向要pop对象的指针"></a>方法3：返回一个指向要pop对象的指针</h4><p>返回一个指向对象的指针显然是不会抛出异常的。 但是缺点是我们需要一个方法来管理该对象的内存，而且对于简单的类型(比如int), 管理内存的开销要比直接返回值要大。</p>
+<p>如果要使用这种方案的话，std::share_ptr是一个很好的选择。这样不仅避免了内存泄露，同时内存分配是完全有标准库来掌控的。 但是我们需要为栈上的每个对象调用new， 和非线程安全的栈比起来，这是一个很大的开销。</p>
+<h4 id="方法4：（方法1-2）或者（方法1-3）"><a href="#方法4：（方法1-2）或者（方法1-3）" class="headerlink" title="方法4：（方法1+2）或者（方法1+3）"></a>方法4：（方法1+2）或者（方法1+3）</h4><p>对于泛型编程来说，灵活性很重要。</p>
+<h4 id="方法1-3"><a href="#方法1-3" class="headerlink" title="方法1+3"></a>方法1+3</h4><p>代码如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;exception&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;memory&gt;</span></span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">empty_stack</span>:</span> std::exception</span><br><span class="line">&#123;</span><br><span class="line">    <span class="function"><span class="keyword">const</span> <span class="keyword">char</span>* <span class="title">what</span><span class="params">()</span> <span class="keyword">const</span> <span class="title">throw</span><span class="params">()</span></span>;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="keyword">template</span>&lt;<span class="keyword">typename</span> T&gt;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">threadsafe_stack</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="built_in">threadsafe_stack</span>();</span><br><span class="line">    <span class="built_in">threadsafe_stack</span>(<span class="keyword">const</span> threadsafe_stack&amp;);</span><br><span class="line">    threadsafe_stack&amp; <span class="keyword">operator</span>=(<span class="keyword">const</span> threadsafe_stack&amp;) = <span class="keyword">delete</span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">push</span><span class="params">(T new_value)</span></span>;</span><br><span class="line">    <span class="function">std::shared_ptr&lt;T&gt; <span class="title">pop</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">pop</span><span class="params">(T&amp; value)</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">bool</span> <span class="title">empty</span><span class="params">()</span> <span class="keyword">const</span></span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>具体的实现如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;exception&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;memory&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;mutex&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stack&gt;</span></span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">empty_stack</span>:</span> std::exception</span><br><span class="line">&#123;</span><br><span class="line">    <span class="function"><span class="keyword">const</span> <span class="keyword">char</span>* <span class="title">what</span><span class="params">()</span> <span class="keyword">const</span> <span class="title">throw</span><span class="params">()</span></span>;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="keyword">template</span>&lt;<span class="keyword">typename</span> T&gt;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">threadsafe_stack</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">    std::stack&lt;T&gt; data;</span><br><span class="line">    <span class="keyword">mutable</span> std::mutex m;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="built_in">threadsafe_stack</span>()&#123;&#125;</span><br><span class="line">    <span class="built_in">threadsafe_stack</span>(<span class="keyword">const</span> threadsafe_stack&amp; other)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">lock</span><span class="params">(other.m)</span></span>;</span><br><span class="line">        data=other.data;</span><br><span class="line">    &#125;</span><br><span class="line">    threadsafe_stack&amp; <span class="keyword">operator</span>=(<span class="keyword">const</span> threadsafe_stack&amp;) = <span class="keyword">delete</span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">push</span><span class="params">(T new_value)</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">lock</span><span class="params">(m)</span></span>;</span><br><span class="line">        data.<span class="built_in">push</span>(new_value);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function">std::shared_ptr&lt;T&gt; <span class="title">pop</span><span class="params">()</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">lock</span><span class="params">(m)</span></span>;</span><br><span class="line">        <span class="keyword">if</span>(data.<span class="built_in">empty</span>()) <span class="keyword">throw</span> <span class="built_in">empty_stack</span>();</span><br><span class="line">        <span class="function">std::shared_ptr&lt;T&gt; <span class="keyword">const</span> <span class="title">res</span><span class="params">(std::make_shared&lt;T&gt;(data.top()))</span></span>;</span><br><span class="line">        data.<span class="built_in">pop</span>();</span><br><span class="line">        <span class="keyword">return</span> res;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">pop</span><span class="params">(T&amp; value)</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">lock</span><span class="params">(m)</span></span>;</span><br><span class="line">        <span class="keyword">if</span>(data.<span class="built_in">empty</span>()) <span class="keyword">throw</span> <span class="built_in">empty_stack</span>();</span><br><span class="line">        value=data.<span class="built_in">top</span>();</span><br><span class="line">        data.<span class="built_in">pop</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">bool</span> <span class="title">empty</span><span class="params">()</span> <span class="keyword">const</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">lock</span><span class="params">(m)</span></span>;</span><br><span class="line">        <span class="keyword">return</span> data.<span class="built_in">empty</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>上面这种实现将top和pop操作合二为一，从而避免了race condition。pop提供了两个重载过后的函数：</p>
+<ul>
+<li>如果pop没有提供参数，那么将返回一个std::share_ptr对象，因为我们返回的是一个指针，则对象的复制构造函数不会被调用，自然也避免了产生异常。</li>
+<li>如果pop提供了一个引用，则会在pop内调用对象的赋值构造函数，又因为赋值构造函数不会创造新的内存区域，而只是简单的赋值，这样就避免了异常的产生。</li>
+</ul>
+<p>我们可以看到，锁的粒度太小是产生race condition的原因，通过增大锁的粒度，我们成功的实现了一个线程安全的stack类。但是也不是锁的粒度越大就越好，以前linux在内核中就只用了一个锁，这样的后果就是一个4核的电脑性能还没单核的性能强。</p>
+<p>有的问题可以通过增加锁的粒度来解决，但是有时候还是需要更加细粒度的锁来保护数据，比如需要保护一个类的不同的对象。这时，要么把加锁这件事留给使用者，要么用一个单独的锁来锁住这个类的所有实例。</p>
+<p>当在一个操作中需要多个锁，这时候可能会带来新的问题：死锁。</p>
+<h3 id="死锁：-问题和解决方案"><a href="#死锁：-问题和解决方案" class="headerlink" title="死锁： 问题和解决方案"></a>死锁： 问题和解决方案</h3><p>一种办法是以相同的顺序加锁</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/07/27/C-%E5%A4%9A%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E9%97%B4%E8%B4%A1%E7%8C%AE%E6%95%B0%E6%8D%AE/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/07/27/C-%E5%A4%9A%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E9%97%B4%E8%B4%A1%E7%8C%AE%E6%95%B0%E6%8D%AE/" class="post-title-link" itemprop="url">C++多线程-线程间贡献数据</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-07-27 19:59:07" itemprop="dateCreated datePublished" datetime="2022-07-27T19:59:07+08:00">2022-07-27</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/07/27/%E7%8E%B0%E4%BB%A3C-%E5%9F%BA%E7%A1%80/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/07/27/%E7%8E%B0%E4%BB%A3C-%E5%9F%BA%E7%A1%80/" class="post-title-link" itemprop="url">现代C++基础</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-07-27 18:06:56" itemprop="dateCreated datePublished" datetime="2022-07-27T18:06:56+08:00">2022-07-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-08-27 19:20:13" itemprop="dateModified" datetime="2022-08-27T19:20:13+08:00">2022-08-27</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h3 id="关于完美转发"><a href="#关于完美转发" class="headerlink" title="关于完美转发"></a>关于完美转发</h3><p><a target="_blank" rel="noopener" href="https://www.codeleading.com/article/37655627508/">C++完美转发实现原理：万能引用、引用折叠</a></p>
+<h3 id="std-mem-fn"><a href="#std-mem-fn" class="headerlink" title="std::mem_fn"></a>std::mem_fn</h3><p>如果你用&amp;Item::Foo调用for_each()，代码会尝试调用(&amp;Item::Foo)(x)，这是病态的，因为指向成员的指针必须写(x.*&amp;Item::Foo)()。mem_fn要解决的正是语法上的差异:mem_fn处理成员指针的调用语法，这样就可以使用成员指针以及函数和函数对象的所有算法。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">template</span>&lt;class InputIt, class UnaryFunction&gt;</span></span><br><span class="line"><span class="function">UnaryFunction <span class="title">for_each</span><span class="params">(InputIt first, InputIt last, UnaryFunction f)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (; first != last; ++first) &#123;</span><br><span class="line">        <span class="built_in">f</span>(*first); <span class="comment">// &lt;== N.B. f(*first)</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> f;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/37259529/why-use-mem-fn">c++ - Why use mem_fn? - Stack Overflow</a></p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/07/25/c-%E5%A4%9A%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E7%AE%A1%E7%90%86/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/07/25/c-%E5%A4%9A%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E7%AE%A1%E7%90%86/" class="post-title-link" itemprop="url">c++多线程-线程管理</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-07-25 19:17:30" itemprop="dateCreated datePublished" datetime="2022-07-25T19:17:30+08:00">2022-07-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-07-27 19:58:11" itemprop="dateModified" datetime="2022-07-27T19:58:11+08:00">2022-07-27</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="1-Using-RAII-to-wait-for-a-thread-to-complete"><a href="#1-Using-RAII-to-wait-for-a-thread-to-complete" class="headerlink" title="1. Using RAII to wait for a thread to complete"></a>1. Using RAII to wait for a thread to complete</h2><pre><code>一个线程必须调用join()，或者detach(), detach 一般直接使用，但是join()就不是这样。如果在新的线程中有异常发生，join()可能就不会被调用。
+用RAII可以避免使用try...catch语句来处理异常。
+</code></pre>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">thread_guard</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    std::thread&amp; t;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="function"><span class="keyword">explicit</span> <span class="title">thread_guard</span><span class="params">(std::thread&amp; t_)</span>:</span></span><br><span class="line"><span class="function">    t(t_)</span></span><br><span class="line"><span class="function">    &#123;</span>&#125;</span><br><span class="line">    ~<span class="built_in">thread_guard</span>()</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span>(t.<span class="built_in">joinable</span>())</span><br><span class="line">        &#123;</span><br><span class="line">            t.<span class="built_in">join</span>();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">thread_guard</span>(thread_guard <span class="keyword">const</span>&amp;)=<span class="keyword">delete</span>;</span><br><span class="line">    thread_guard&amp; <span class="keyword">operator</span>=(thread_guard <span class="keyword">const</span>&amp;)=<span class="keyword">delete</span>;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">func</span>;</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">f</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> some_local_state=<span class="number">0</span>;</span><br><span class="line">    <span class="function">func <span class="title">my_func</span><span class="params">(some_local_state)</span></span>;</span><br><span class="line">    <span class="function">std::thread <span class="title">t</span><span class="params">(my_func)</span></span>;</span><br><span class="line">    <span class="function">thread_guard <span class="title">g</span><span class="params">(t)</span></span>;</span><br><span class="line">    <span class="built_in">do_something_in_current_thread</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="2-Passing-arguments-to-a-thread-function"><a href="#2-Passing-arguments-to-a-thread-function" class="headerlink" title="2. Passing arguments to a thread function"></a>2. Passing arguments to a thread function</h2><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">f</span><span class="params">(<span class="keyword">int</span> i,std::string <span class="keyword">const</span>&amp; s)</span></span>;</span><br><span class="line"><span class="function">std::thread <span class="title">t</span><span class="params">(f,<span class="number">3</span>,”hello”)</span></span>;</span><br></pre></td></tr></table></figure>
+<pre><code>c++首先会把`&quot;heelo&quot;`复制到新的线程的堆栈，然后进行类型转换（尽管f的参数是一个引用）。
+</code></pre>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">f</span><span class="params">(<span class="keyword">int</span> i,std::string <span class="keyword">const</span>&amp; s)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">oops</span><span class="params">(<span class="keyword">int</span> some_param)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">char</span> buffer[<span class="number">1024</span>];</span><br><span class="line">    <span class="built_in">sprintf</span>(buffer, <span class="string">&quot;%i&quot;</span>,some_param);</span><br><span class="line">    <span class="function">std::thread <span class="title">t</span><span class="params">(f,<span class="number">3</span>,buffer)</span></span>;</span><br><span class="line">    t.<span class="built_in">detach</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<pre><code>如果是传递指针，是非常危险的，因为新的线程在进行类型转换的时候，oops()可能已经退出了，因此buffer应该已经变成了一个dangling pointer了，访问它大概率会出发段错误。避免方法如下：
+</code></pre>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">f</span><span class="params">(<span class="keyword">int</span> i,std::string <span class="keyword">const</span>&amp; s)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">not_oops</span><span class="params">(<span class="keyword">int</span> some_param)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">char</span> buffer[<span class="number">1024</span>];</span><br><span class="line">    <span class="built_in">sprintf</span>(buffer,<span class="string">&quot;%i&quot;</span>,some_param);</span><br><span class="line">    <span class="function">std::thread <span class="title">t</span><span class="params">(f,<span class="number">3</span>,std::string(buffer))</span></span>;</span><br><span class="line">    t.<span class="built_in">detach</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="3-std-bind和std-thread的特性"><a href="#3-std-bind和std-thread的特性" class="headerlink" title="3. std::bind和std::thread的特性"></a>3. std::bind和std::thread的特性</h2><p>因为给std::bind 和 std::thread传递参数时，即使函数的形参类型是一个引用，他们也会使用拷贝函数拷贝传入实参（C++觉得大多数情况应该这样做），这个时候如果我们确实需要使用引用，使用std::ref即可。</p>
+<p>参考：<br><a target="_blank" rel="noopener" href="https://murphypei.github.io/blog/2019/04/cpp-std-ref">C++11 的 std::ref 用法</a></p>
+<p>而且std::bind 和 std::thread的机制是差不多的，比如：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">X</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">do_lengthy_work</span><span class="params">()</span></span>;</span><br><span class="line">&#125;;</span><br><span class="line">X my_x;</span><br><span class="line"><span class="function">std::thread <span class="title">t</span><span class="params">(&amp;X::do_lengthy_work,&amp;my_x)</span></span>;</span><br></pre></td></tr></table></figure>
+<p>可以使用类的方法指针作为thread的函数，将对象指针作为参数。</p>
+<hr>
+<h3 id="3-1-当参数不能复制只能移动时"><a href="#3-1-当参数不能复制只能移动时" class="headerlink" title="3.1. 当参数不能复制只能移动时"></a>3.1. 当参数不能复制只能移动时</h3><blockquote>
+<p>不能复制只能移动是指：一个对象持有的数据转移到另一个对象时，原对象此时就不再指向这个数据。</p>
+</blockquote>
+<p>一个例子是std::unique_ptr, 同一时间只有一个std::unique_ptr可以持有一个对象，当std::unique_ptr对销毁，它指向的对象也会被销毁。可以使用移动构造函数和移动赋值运算符来在不同的std::unique_ptr之间转移一个对象的所有权（所有权从std::unique_ptr转移之后，该指针为nullptr）。</p>
+<p>当参数不能复制只能移动时，应该使用std::move将该一个对象的所有权叫给线程：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">process_big_object</span><span class="params">(std::unique_ptr&lt;big_object&gt;)</span></span>;</span><br><span class="line"><span class="function">std::unique_ptr&lt;big_object&gt; <span class="title">p</span><span class="params">(<span class="keyword">new</span> big_object)</span></span>;</span><br><span class="line">p-&gt;<span class="built_in">prepare_data</span>(<span class="number">42</span>);</span><br><span class="line"><span class="function">std::thread <span class="title">t</span><span class="params">(process_big_object,std::move(p))</span></span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="转移对象的所有权"><a href="#转移对象的所有权" class="headerlink" title="转移对象的所有权"></a>转移对象的所有权</h3><p>在C++标准库中，有许多资源持有对象（std::ifstream, std::unique_ptr等）都是可以移动但是不能复制的, 而std::thread也是其中一员。<br>因此如果要转移std::thread对象的所有权，示例如下:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">some_function</span><span class="params">()</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">some_other_function</span><span class="params">()</span></span>;</span><br><span class="line"><span class="function">std::thread <span class="title">t1</span><span class="params">(some_function)</span></span>;</span><br><span class="line">std::thread t2=std::<span class="built_in">move</span>(t1);</span><br><span class="line">t1=std::<span class="built_in">thread</span>(some_other_function);</span><br><span class="line">std::thread t3;</span><br><span class="line">t3=std::<span class="built_in">move</span>(t2);</span><br><span class="line">t1=std::<span class="built_in">move</span>(t3);</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>scoped_thread 例子</p>
+</blockquote>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">scoped_thread</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    std::thread t;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="function"><span class="keyword">explicit</span> <span class="title">scoped_thread</span><span class="params">(std::thread t_)</span>:</span></span><br><span class="line"><span class="function">        t(std::move(t_))</span></span><br><span class="line"><span class="function">    &#123;</span></span><br><span class="line">    <span class="keyword">if</span>(!t.<span class="built_in">joinable</span>())</span><br><span class="line">        <span class="keyword">throw</span> std::<span class="built_in">logic_error</span>(“No thread”);</span><br><span class="line">    &#125;</span><br><span class="line">    ~<span class="built_in">scoped_thread</span>()</span><br><span class="line">    &#123;</span><br><span class="line">        t.<span class="built_in">join</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">scoped_thread</span>(scoped_thread <span class="keyword">const</span>&amp;)=<span class="keyword">delete</span>;</span><br><span class="line">    scoped_thread&amp; <span class="keyword">operator</span>=(scoped_thread <span class="keyword">const</span>&amp;)=<span class="keyword">delete</span>;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">func</span>;</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">f</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> some_local_state;</span><br><span class="line">    <span class="function">scoped_thread <span class="title">t</span><span class="params">(std::thread(func(some_local_state)))</span></span>;</span><br><span class="line">    <span class="built_in">do_something_in_current_thread</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="产生多个线程并且等待完成"><a href="#产生多个线程并且等待完成" class="headerlink" title="产生多个线程并且等待完成"></a>产生多个线程并且等待完成</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">do_work</span><span class="params">(<span class="keyword">unsigned</span> id)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">f</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    std::vector&lt;std::thread&gt; threads;</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">unsigned</span> i=<span class="number">0</span>;i&lt;<span class="number">20</span>;++i)</span><br><span class="line">    &#123;</span><br><span class="line">        threads.<span class="built_in">push_back</span>(std::<span class="built_in">thread</span>(do_work,i));</span><br><span class="line">    &#125;</span><br><span class="line">    std::for_each(threads.<span class="built_in">begin</span>(),threads.<span class="built_in">end</span>(),</span><br><span class="line">        std::<span class="built_in">mem_fn</span>(&amp;std::thread::join));</span><br><span class="line">        <span class="comment">//函数模板 std::mem_fn 生成指向成员指针的包装对象，</span></span><br><span class="line">        <span class="comment">//它可以存储、复制及调用指向成员指针。</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h3 id="在运行时选择线程数"><a href="#在运行时选择线程数" class="headerlink" title="在运行时选择线程数"></a>在运行时选择线程数</h3><p>std::thread::hardware_concurrency()函数可以获取可并行的线程数(一般等于CPU核数)。</p>
+<h3 id="线程标识符"><a href="#线程标识符" class="headerlink" title="线程标识符"></a>线程标识符</h3><ol>
+<li>std::thread::get_id()</li>
+<li>std::this_thread::get_id()<br>e.g. <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">std::thread::id master_thread;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">some_core_part_of_algorithm</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(std::this_thread::<span class="built_in">get_id</span>()==master_thread)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="built_in">do_master_thread_work</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">do_common_work</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ol>
+<p><del>The world is flat.</del></p>
+<blockquote>
+<p>blockquote</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Syntax</th>
+<th>Description</th>
+<th>sd</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Header</td>
+<td>Title</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Paragraph</td>
+<td>Text</td>
+<td>-</td>
+</tr>
+</tbody></table>
+<ul>
+<li><input checked="" disabled="" type="checkbox"> Write the press release</li>
+<li><input checked="" disabled="" type="checkbox"> Update the website</li>
+<li><input checked="" disabled="" type="checkbox"> Contact the media</li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/07/25/muduo%E5%AD%A6%E4%B9%A0-%E5%9F%BA%E7%A1%80/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/07/25/muduo%E5%AD%A6%E4%B9%A0-%E5%9F%BA%E7%A1%80/" class="post-title-link" itemprop="url">muduo学习-基础</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-07-25 11:56:32" itemprop="dateCreated datePublished" datetime="2022-07-25T11:56:32+08:00">2022-07-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-10-26 13:36:23" itemprop="dateModified" datetime="2022-10-26T13:36:23+08:00">2022-10-26</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="常见概念"><a href="#常见概念" class="headerlink" title="常见概念"></a>常见概念</h2><ul>
+<li>线程和进程<br>就资源来说区别在于：<br>Per process items             | Per thread items</li>
+</ul>
+<p>——————————|—————–<br>Address space                 | Program counter<br>Global variables              | Registers<br>Open files                    | Stack<br>Child processes               | State<br>Pending alarms                |<br>Signals and signal handlers   |<br>Accounting information        |<br>当一个可执行文件执行时，会以单进程单线程的方式运行，之后可以产生很多个线程。<br><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/200469/what-is-the-difference-between-a-process-and-a-thread">multithreading - What is the difference between a process and a thread? - Stack Overflow</a></p>
+<h3 id="socket"><a href="#socket" class="headerlink" title="socket"></a>socket</h3><h3 id="muduo的类"><a href="#muduo的类" class="headerlink" title="muduo的类"></a>muduo的类</h3><p>TcpConnection类的构造函数：<br>TcpConnection::TcpConnection(EventLoop* loop,<br>                             const string&amp; nameArg,<br>                             int sockfd,<br>                             const InetAddress&amp; localAddr,<br>                             const InetAddress&amp; peerAddr)<br>TcpConnection的类成员变量为：</p>
+<p>EventLoop* loop_;<br>//用于描述一个连接的两端<br>const InetAddress localAddr_;<br>const InetAddress peerAddr_;<br>std::unique_ptr<Socket> socket_;<br>std::unique_ptr<Channel> channel_;<br>Buffer inputBuffer_;<br>Buffer outputBuffer_; </p>
+<p>moduo的核心思想是one loop per thread，这个loop到底在干干什么呢？<br>通过给的例子我们可以知道，一般EventLoop都会调用EventLoop::loop():</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">EventLoop::loop</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="built_in">assert</span>(!looping_);</span><br><span class="line">  <span class="built_in">assertInLoopThread</span>();</span><br><span class="line">  looping_ = <span class="literal">true</span>;</span><br><span class="line">  quit_ = <span class="literal">false</span>;  <span class="comment">// <span class="doctag">FIXME:</span> what if someone calls quit() before loop() ?</span></span><br><span class="line">  LOG_TRACE &lt;&lt; <span class="string">&quot;EventLoop &quot;</span> &lt;&lt; <span class="keyword">this</span> &lt;&lt; <span class="string">&quot; start looping&quot;</span>;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">while</span> (!quit_)</span><br><span class="line">  &#123;</span><br><span class="line">    activeChannels_.<span class="built_in">clear</span>();</span><br><span class="line">    pollReturnTime_ = poller_-&gt;<span class="built_in">poll</span>(kPollTimeMs, &amp;activeChannels_);</span><br><span class="line">    ++iteration_;</span><br><span class="line">    <span class="keyword">if</span> (Logger::<span class="built_in">logLevel</span>() &lt;= Logger::TRACE)</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="built_in">printActiveChannels</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// TODO sort channel by priority</span></span><br><span class="line">    eventHandling_ = <span class="literal">true</span>;</span><br><span class="line">    <span class="keyword">for</span> (Channel* channel : activeChannels_)</span><br><span class="line">    &#123;</span><br><span class="line">      currentActiveChannel_ = channel;</span><br><span class="line">      currentActiveChannel_-&gt;<span class="built_in">handleEvent</span>(pollReturnTime_);</span><br><span class="line">    &#125;</span><br><span class="line">    currentActiveChannel_ = <span class="literal">NULL</span>;</span><br><span class="line">    eventHandling_ = <span class="literal">false</span>;</span><br><span class="line">    <span class="built_in">doPendingFunctors</span>();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  LOG_TRACE &lt;&lt; <span class="string">&quot;EventLoop &quot;</span> &lt;&lt; <span class="keyword">this</span> &lt;&lt; <span class="string">&quot; stop looping&quot;</span>;</span><br><span class="line">  looping_ = <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>可以看出来，其实这个循环类似于网络编程IO复用里面epoll_wait()，然后再处理到达的事件。其中epoll_wait()被封装在Poller类中，Poller类是一个基类，2个派生类对应于linux的poll函数和epoll系列函数。</p>
+<p>当Poller::poll会返回就绪的文件描述符，但是不是直接返回原始的文件描述符，而是返回封装过后的Channel列表。</p>
+<p>上面channel 的定义如下：</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
     <link itemprop="mainEntityOfPage" href="http://example.com/2022/07/22/xv6-mmap-lab-%E6%80%BB%E7%BB%93/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -168,10 +824,16 @@
                 <i class="fa fa-calendar-o"></i>
               </span>
               <span class="post-meta-item-text">Posted on</span>
-              
 
-              <time title="Created: 2022-07-22 11:17:53 / Modified: 16:06:25" itemprop="dateCreated datePublished" datetime="2022-07-22T11:17:53+08:00">2022-07-22</time>
+              <time title="Created: 2022-07-22 11:17:53" itemprop="dateCreated datePublished" datetime="2022-07-22T11:17:53+08:00">2022-07-22</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-10-24 17:48:15" itemprop="dateModified" datetime="2022-10-24T17:48:15+08:00">2022-10-24</time>
+              </span>
 
           
 
@@ -405,492 +1067,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/19/xv6%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE%E6%A0%88%E5%AE%9E%E7%8E%B0%E5%88%86%E6%9E%90/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="John Doe">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Hexo">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/03/19/xv6%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE%E6%A0%88%E5%AE%9E%E7%8E%B0%E5%88%86%E6%9E%90/" class="post-title-link" itemprop="url">xv6网络协议栈实现分析</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2022-03-19 10:17:33 / Modified: 13:50:16" itemprop="dateCreated datePublished" datetime="2022-03-19T10:17:33+08:00">2022-03-19</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>最近做了xv6的实验:<br><a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/labs/net.html">Lab: networking</a></p>
-<p>实验要求还是很简单，对比了一下之前的实验，发现难度降低不是一点半点，所以就阅读了xv6内部的socket协议栈的实现。</p>
-<p>xv6和linux一样，都是一切皆文件，所以如果用户想要向<code>socket</code>读写数据，也是要调用<code>read/write</code>，而r/w在内核里面调用的是<code>fileread</code>和<code>filewrite</code>.</p>
-<p>以下是<code>read</code>的实现：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">uint64</span><br><span class="line">sys_read(void)</span><br><span class="line">&#123;</span><br><span class="line">  struct file *f;</span><br><span class="line">  int n;</span><br><span class="line">  uint64 p;</span><br><span class="line"></span><br><span class="line">  if(argfd(0, 0, &amp;f) &lt; 0 || argint(2, &amp;n) &lt; 0 || argaddr(1, &amp;p) &lt; 0)</span><br><span class="line">    return -1;</span><br><span class="line">  return fileread(f, p, n);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><code>write</code>类似.</p>
-<p>file结构体的定义如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">struct file &#123;</span><br><span class="line">#ifdef LAB_NET</span><br><span class="line">  enum &#123; FD_NONE, FD_PIPE, FD_INODE, FD_DEVICE, FD_SOCK &#125; type;</span><br><span class="line">#else</span><br><span class="line">  enum &#123; FD_NONE, FD_PIPE, FD_INODE, FD_DEVICE &#125; type;</span><br><span class="line">#endif</span><br><span class="line">  int ref; // reference count</span><br><span class="line">  char readable;</span><br><span class="line">  char writable;</span><br><span class="line">  struct pipe *pipe; // FD_PIPE</span><br><span class="line">  struct inode *ip;  // FD_INODE and FD_DEVICE</span><br><span class="line">#ifdef LAB_NET</span><br><span class="line">  struct sock *sock; // FD_SOCK</span><br><span class="line">#endif</span><br><span class="line">  uint off;          // FD_INODE</span><br><span class="line">  short major;       // FD_DEVICE</span><br><span class="line">&#125;;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<p>可以看到，file结构体内部有一个枚举变量type，当<code>fileread</code>检测到<code>fd-&gt;type</code>为<code>FD_SOCK</code>，即<code>socket</code>文件时，便会调用<code>sockread</code>来读取<code>socket</code>文件。</p>
-<p><code>sockread</code>首先会获取文件的锁，然后检测该socket文件对应的接收队列是否为空，如果为空，说明网卡还没有接收到数据，则进程应该进入睡眠状态，等待唤醒。  如果该socket的接收队列不为空，则从接收队列中pop一个消息，该消息对应的结构体为mbuf。定义如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">struct mbuf &#123;</span><br><span class="line">  struct mbuf  *next; // the next mbuf in the chain</span><br><span class="line">  char         *head; // the current start position of the buffer</span><br><span class="line">  unsigned int len;   // the length of the buffer</span><br><span class="line">  char         buf[MBUF_SIZE]; // the backing store</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-
-<p>获取消息后，就使用<code>copyout</code>函数将，消息从内核空间中复制到用户空间中。</p>
-<p>刚刚提到如果指定<code>socket</code>对应的接收队列为空，那么它怎么被唤醒的呢？</p>
-<p>为了搞清楚这个问题，我们首先来看网卡驱动程序，网络属于外部设备，所以如果有数据到来，网卡设备会以中断的方式通知CPU，cpu则会调用中断处理函数，网卡的中断处理函数为<code>e1000_intr()</code>,定义如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">void</span><br><span class="line">e1000_intr(void)</span><br><span class="line">&#123;</span><br><span class="line">  // tell the e1000 we&#x27;ve seen this interrupt;</span><br><span class="line">  // without this the e1000 won&#x27;t raise any</span><br><span class="line">  // further interrupts.</span><br><span class="line">  regs[E1000_ICR] = 0xffffffff;</span><br><span class="line"></span><br><span class="line">  e1000_recv();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>可以看到，中断函数将调用e1000_recv来接收到来的数据，这也是xv6实验要求我们实现的函数之一，通过查询手册，该函数实现如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">static void</span><br><span class="line">e1000_recv(void)</span><br><span class="line">&#123;</span><br><span class="line">  //</span><br><span class="line">  // Your code here.</span><br><span class="line">  //</span><br><span class="line">  // Check for packets that have arrived from the e1000</span><br><span class="line">  // Create and deliver an mbuf for each packet (using net_rx()).</span><br><span class="line">  //</span><br><span class="line">  //should recive all packets</span><br><span class="line">  while(1)&#123;</span><br><span class="line">    acquire(&amp;e1000_lock);</span><br><span class="line">    int index = (regs[E1000_RDT]+1)%RX_RING_SIZE;</span><br><span class="line">    if((rx_ring[index].status&amp;E1000_RXD_STAT_DD)==0)&#123;</span><br><span class="line">      release(&amp;e1000_lock);</span><br><span class="line">      return;</span><br><span class="line">    &#125;</span><br><span class="line">    rx_mbufs[index]-&gt;len = rx_ring[index].length;</span><br><span class="line">    release(&amp;e1000_lock);</span><br><span class="line">    net_rx(rx_mbufs[index]);</span><br><span class="line">    acquire(&amp;e1000_lock);</span><br><span class="line">    regs[E1000_RDT] = index;</span><br><span class="line">    rx_mbufs[index] = mbufalloc(0);</span><br><span class="line">    rx_ring[index].addr = (uint64)rx_mbufs[index]-&gt;head;</span><br><span class="line">    rx_ring[index].status = 0;</span><br><span class="line">    index = (regs[E1000_RDT]+1)%RX_RING_SIZE;</span><br><span class="line">    release(&amp;e1000_lock);</span><br><span class="line">    </span><br><span class="line">  &#125;</span><br><span class="line">  return;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>该函数用到了两个关键的数据结构。一个是rx_ring(接收环)的数组，其元素是rx_desc(接收描述符)，这两个数据结构都是和e1000网卡密切相关的，rx_ring就是一个循环数组，rx_desc内部有很多field，e1000网卡接收到数据之后，数据便是储存在rx_desc之中的。</p>
-<p>要读取数据，需要用到E1000_RDT这个寄存器，手册里面说的：<br>HARDWARE OWNS ALL DESCRIPTORS BETWEEN [HEAD AND TAIL].<br>结合HEAD和TAIL寄存器的说明，我们应该将HEAD初始化为0，TAIL初始化为环形数组的最后一个位置，这样硬件能将到来的网络包储存在HEAD和TAIL之间，如果收到一个packet，硬件就会将它放到HEAD指向的位置，由此应该用<code>(regs[E1000_RDT]+1)%RX_RING_SIZE</code>来读取接收到的数据包。</p>
-<p>重点是，网卡一次可能接收到了很多包，所以e1000_recv函数应该遍历在TAIL-&gt;HEAD之间所有的描述符，直到遇到一个描述符的状态域的E1000_RXD_STAT_DD为0，则表示所以数据都被读取完毕，应该返回。</p>
-<p>读取到的数据会传递给net_rx()函数，这个函数会将这个以太网数据包的头部提取出来，然后判断上层协议类型是什么(xv6协议栈支持IP,ARP)，代码如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">void net_rx(struct mbuf *m)</span><br><span class="line">&#123;</span><br><span class="line">  struct eth *ethhdr;</span><br><span class="line">  uint16 type;</span><br><span class="line"></span><br><span class="line">  ethhdr = mbufpullhdr(m, *ethhdr);</span><br><span class="line">  if (!ethhdr) &#123;</span><br><span class="line">    mbuffree(m);</span><br><span class="line">    return;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  type = ntohs(ethhdr-&gt;type);</span><br><span class="line">  if (type == ETHTYPE_IP)</span><br><span class="line">    net_rx_ip(m);</span><br><span class="line">  else if (type == ETHTYPE_ARP)</span><br><span class="line">    net_rx_arp(m);</span><br><span class="line">  else</span><br><span class="line">    mbuffree(m);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>我们假设这个以太网的上层协议是ip，那么接下来，应该判断ip数据报的上层协议了，xv6的实现只支持udp。因此，在<code>net_rx_ip</code>函数内部会调用<code>net_rx_udp</code>函数.</p>
-<p>这个函数会解析udp数据包的头部，然后转到sockrecvudp()函数，该函数的定义如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">// called by protocol handler layer to deliver UDP packets</span><br><span class="line">void</span><br><span class="line">sockrecvudp(struct mbuf *m, uint32 raddr, uint16 lport, uint16 rport)</span><br><span class="line">&#123;</span><br><span class="line">  //</span><br><span class="line">  // Find the socket that handles this mbuf and deliver it, waking</span><br><span class="line">  // any sleeping reader. Free the mbuf if there are no sockets</span><br><span class="line">  // registered to handle it.</span><br><span class="line">  //</span><br><span class="line">  struct sock *si;</span><br><span class="line"></span><br><span class="line">  acquire(&amp;lock);</span><br><span class="line">  si = sockets;</span><br><span class="line">  while (si) &#123;</span><br><span class="line">    if (si-&gt;raddr == raddr &amp;&amp; si-&gt;lport == lport &amp;&amp; si-&gt;rport == rport)</span><br><span class="line">      goto found;</span><br><span class="line">    si = si-&gt;next;</span><br><span class="line">  &#125;</span><br><span class="line">  release(&amp;lock);</span><br><span class="line">  mbuffree(m);</span><br><span class="line">  return;</span><br><span class="line"></span><br><span class="line">found:</span><br><span class="line">  acquire(&amp;si-&gt;lock);</span><br><span class="line">  mbufq_pushtail(&amp;si-&gt;rxq, m);</span><br><span class="line">  wakeup(&amp;si-&gt;rxq);</span><br><span class="line">  release(&amp;si-&gt;lock);</span><br><span class="line">  release(&amp;lock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>这个函数用了到<code>sockets</code>，这是一个链表，内核中所有的<code>socket</code>都被链接到这个<code>sockets</code>链表上。这个函数遍历这个链表，如果发现有<code>socket</code>的地址和端口号符合刚刚在<code>net_rx_udp()</code>中解析得到的地址和端口号，则会将消息推进该<code>socket</code>对应的接收缓冲区之中，然后唤醒之前因为没有缓冲区为空而睡眠的进程。</p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/08/17/exec%E5%87%BD%E6%95%B0%E7%B0%87%E5%A6%82%E4%BD%95%E8%AE%B0%E5%BF%86/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="John Doe">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Hexo">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/08/17/exec%E5%87%BD%E6%95%B0%E7%B0%87%E5%A6%82%E4%BD%95%E8%AE%B0%E5%BF%86/" class="post-title-link" itemprop="url">exec函数簇如何记忆</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2021-08-17 10:53:20 / Modified: 11:03:25" itemprop="dateCreated datePublished" datetime="2021-08-17T10:53:20+08:00">2021-08-17</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">extern</span> <span class="keyword">char</span> **environ;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">execl</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *pathname, <span class="keyword">const</span> <span class="keyword">char</span> *arg, ...</span></span></span><br><span class="line"><span class="params"><span class="function">                     <span class="comment">/*, (char *) NULL */</span>)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">execlp</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *file, <span class="keyword">const</span> <span class="keyword">char</span> *arg, ...</span></span></span><br><span class="line"><span class="params"><span class="function">                     <span class="comment">/*, (char *) NULL */</span>)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">execle</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *pathname, <span class="keyword">const</span> <span class="keyword">char</span> *arg, ...</span></span></span><br><span class="line"><span class="params"><span class="function">                     <span class="comment">/*, (char *) NULL, char *const envp[] */</span>)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">execv</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *pathname, <span class="keyword">char</span> *<span class="keyword">const</span> argv[])</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">execvp</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *file, <span class="keyword">char</span> *<span class="keyword">const</span> argv[])</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">execvpe</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *file, <span class="keyword">char</span> *<span class="keyword">const</span> argv[], <span class="keyword">char</span> *<span class="keyword">const</span> envp[])</span></span>;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<ol>
-<li>函数名里面的l和v是互斥的，l代表list，v代表vecter（元素是参数字符串）。</li>
-<li>p代表file指定一个可执行文件，并在PATH环境变量所指定的位置中寻找该文件。</li>
-<li>e代表使用environ变量，而不是父进程的环境</li>
-</ol>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/08/16/C%E8%AF%AD%E8%A8%80if%E4%B8%AD%E7%9A%84%E6%8B%AC%E5%8F%B7%E5%AF%BC%E8%87%B4%E7%9A%84%E9%94%99%E8%AF%AF/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="John Doe">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Hexo">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/08/16/C%E8%AF%AD%E8%A8%80if%E4%B8%AD%E7%9A%84%E6%8B%AC%E5%8F%B7%E5%AF%BC%E8%87%B4%E7%9A%84%E9%94%99%E8%AF%AF/" class="post-title-link" itemprop="url">C语言if中的括号导致的错误</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2021-08-16 10:56:49 / Modified: 10:57:15" itemprop="dateCreated datePublished" datetime="2021-08-16T10:56:49+08:00">2021-08-16</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//it says pid = (fork()&lt;0)</span></span><br><span class="line"><span class="comment">//but fork always greater than 0, so pid is flase(0), so the following sentence equals if(0)</span></span><br><span class="line"><span class="keyword">if</span>(pid=fork()&lt;<span class="number">0</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment">//this is correct way, which equals:</span></span><br><span class="line"><span class="comment">//pid=fork()</span></span><br><span class="line"><span class="comment">//if(pid&lt;0) </span></span><br><span class="line"><span class="keyword">if</span>((pid=fork()) &lt; <span class="number">0</span>)</span><br></pre></td></tr></table></figure>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/08/13/%E5%88%A9%E7%94%A8GDB%E5%B7%A5%E5%85%B7%E5%88%86%E6%9E%90ungetc-%E5%87%BD%E6%95%B0%E5%8E%9F%E7%90%86/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="John Doe">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Hexo">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/08/13/%E5%88%A9%E7%94%A8GDB%E5%B7%A5%E5%85%B7%E5%88%86%E6%9E%90ungetc-%E5%87%BD%E6%95%B0%E5%8E%9F%E7%90%86/" class="post-title-link" itemprop="url">利用GDB工具分析ungetc()函数原理</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2021-08-13 15:01:12 / Modified: 18:40:26" itemprop="dateCreated datePublished" datetime="2021-08-13T15:01:12+08:00">2021-08-13</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="C源文件以及文本文件"><a href="#C源文件以及文本文件" class="headerlink" title="C源文件以及文本文件"></a>C源文件以及文本文件</h2><h3 id="C源文件"><a href="#C源文件" class="headerlink" title="C源文件"></a>C源文件</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;cstdio&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> <span class="built_in">std</span>;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">test03</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="built_in">std</span>;</span><br><span class="line">    FILE *fp;</span><br><span class="line">    <span class="keyword">int</span> c;</span><br><span class="line">    <span class="keyword">char</span> buffer [<span class="number">256</span>];</span><br><span class="line"></span><br><span class="line">    fp = fopen(<span class="string">&quot;file.txt&quot;</span>, <span class="string">&quot;r&quot;</span>);</span><br><span class="line">    <span class="keyword">if</span>( fp == <span class="literal">NULL</span> )</span><br><span class="line">    &#123;</span><br><span class="line">        perror(<span class="string">&quot;error when open file&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span>(<span class="number">-1</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">while</span>(!feof(fp))</span><br><span class="line">    &#123;</span><br><span class="line">      c = getc (fp);     </span><br><span class="line">      <span class="comment">/* 把行首的 - 替换为 + */</span></span><br><span class="line">        <span class="keyword">if</span>( c == <span class="string">&#x27;-&#x27;</span> )</span><br><span class="line">        &#123;</span><br><span class="line">            ungetc (<span class="string">&#x27;+&#x27;</span>, fp);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">        &#123;</span><br><span class="line">            ungetc(c, fp);</span><br><span class="line">        &#125;</span><br><span class="line">        fgets(buffer, <span class="number">255</span>, fp);</span><br><span class="line">        <span class="built_in">fputs</span>(buffer, <span class="built_in">stdout</span>);</span><br><span class="line">        </span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    test03();</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="txt测试文件"><a href="#txt测试文件" class="headerlink" title="txt测试文件"></a>txt测试文件</h3><p>file.txt中的内容</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">a</span><br><span class="line">-b</span><br><span class="line">-c</span><br></pre></td></tr></table></figure>
-
-<h2 id="前置知识"><a href="#前置知识" class="headerlink" title="前置知识"></a>前置知识</h2><p>通过查看stdio.h, FILE.h struct_FILE.h等头文件，可以发现FILE是一个宏，指向struct _IO_FILE，其具体定义如下(为了简洁，省略了部分内容)：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* The tag name of this struct is _IO_FILE to preserve historic</span></span><br><span class="line"><span class="comment">   C++ mangled names for functions taking FILE* arguments.</span></span><br><span class="line"><span class="comment">   That name should not be used in new code.  */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> _<span class="title">IO_FILE</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">  <span class="keyword">int</span> _flags;		<span class="comment">/* High-order word is _IO_MAGIC; rest is flags. */</span></span><br><span class="line"></span><br><span class="line">  <span class="comment">/* The following pointers correspond to the C++ streambuf protocol. */</span></span><br><span class="line">  <span class="keyword">char</span> *_IO_read_ptr;	<span class="comment">/* Current read pointer */</span></span><br><span class="line">  <span class="keyword">char</span> *_IO_read_end;	<span class="comment">/* End of get area. */</span></span><br><span class="line">  <span class="keyword">char</span> *_IO_read_base;	<span class="comment">/* Start of putback+get area. */</span></span><br><span class="line">  <span class="keyword">char</span> *_IO_write_base;	<span class="comment">/* Start of put area. */</span></span><br><span class="line">  <span class="keyword">char</span> *_IO_write_ptr;	<span class="comment">/* Current put pointer. */</span></span><br><span class="line">  <span class="keyword">char</span> *_IO_write_end;	<span class="comment">/* End of put area. */</span></span><br><span class="line">  <span class="keyword">char</span> *_IO_buf_base;	<span class="comment">/* Start of reserve area. */</span></span><br><span class="line">  <span class="keyword">char</span> *_IO_buf_end;	<span class="comment">/* End of reserve area. */</span></span><br><span class="line"></span><br><span class="line">  <span class="comment">/* The following fields are used to support backing up and undo. */</span></span><br><span class="line">  <span class="keyword">char</span> *_IO_save_base; <span class="comment">/* Pointer to start of non-current get area. */</span></span><br><span class="line">  <span class="keyword">char</span> *_IO_backup_base;  <span class="comment">/* Pointer to first valid character of backup area */</span></span><br><span class="line">  <span class="keyword">char</span> *_IO_save_end; <span class="comment">/* Pointer to end of non-current get area. */</span></span><br><span class="line"></span><br><span class="line">  <span class="comment">//omit something</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-
-
-<h2 id="分析过程-重点观察-IO-file-ptr指针"><a href="#分析过程-重点观察-IO-file-ptr指针" class="headerlink" title="分析过程(重点观察_IO_file_ptr指针)"></a>分析过程(重点观察_IO_file_ptr指针)</h2><h3 id="使用下面命令编译"><a href="#使用下面命令编译" class="headerlink" title="使用下面命令编译"></a>使用下面命令编译</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">g++ -g -o main src/main.cpp</span><br></pre></td></tr></table></figure>
-
-<h3 id="运行gdb-main进入debug界面"><a href="#运行gdb-main进入debug界面" class="headerlink" title="运行gdb main进入debug界面"></a>运行gdb main进入debug界面</h3><p><img src="/2021/08/13/%E5%88%A9%E7%94%A8GDB%E5%B7%A5%E5%85%B7%E5%88%86%E6%9E%90ungetc-%E5%87%BD%E6%95%B0%E5%8E%9F%E7%90%86/2021-08-13-15-10-17.png"></p>
-<h3 id="输入b-test03-进行断点"><a href="#输入b-test03-进行断点" class="headerlink" title="输入b test03 进行断点"></a>输入b test03 进行断点</h3><p><img src="/2021/08/13/%E5%88%A9%E7%94%A8GDB%E5%B7%A5%E5%85%B7%E5%88%86%E6%9E%90ungetc-%E5%87%BD%E6%95%B0%E5%8E%9F%E7%90%86/2021-08-13-15-11-27.png"></p>
-<h3 id="输入r-运行程序"><a href="#输入r-运行程序" class="headerlink" title="输入r 运行程序"></a>输入r 运行程序</h3><p><img src="/2021/08/13/%E5%88%A9%E7%94%A8GDB%E5%B7%A5%E5%85%B7%E5%88%86%E6%9E%90ungetc-%E5%87%BD%E6%95%B0%E5%8E%9F%E7%90%86/2021-08-13-15-12-17.png"></p>
-<h3 id="使用p查看fp指向内存的内容"><a href="#使用p查看fp指向内存的内容" class="headerlink" title="使用p查看fp指向内存的内容"></a>使用p查看fp指向内存的内容</h3><p><img src="/2021/08/13/%E5%88%A9%E7%94%A8GDB%E5%B7%A5%E5%85%B7%E5%88%86%E6%9E%90ungetc-%E5%87%BD%E6%95%B0%E5%8E%9F%E7%90%86/2021-08-13-15-24-08.png"></p>
-<h3 id="运行getc函数再查看fp指向的内容"><a href="#运行getc函数再查看fp指向的内容" class="headerlink" title="运行getc函数再查看fp指向的内容"></a>运行getc函数再查看fp指向的内容</h3><p><img src="/2021/08/13/%E5%88%A9%E7%94%A8GDB%E5%B7%A5%E5%85%B7%E5%88%86%E6%9E%90ungetc-%E5%87%BD%E6%95%B0%E5%8E%9F%E7%90%86/2021-08-13-15-27-49.png"></p>
-<h3 id="运行ungetc"><a href="#运行ungetc" class="headerlink" title="运行ungetc"></a>运行ungetc</h3><p><img src="/2021/08/13/%E5%88%A9%E7%94%A8GDB%E5%B7%A5%E5%85%B7%E5%88%86%E6%9E%90ungetc-%E5%87%BD%E6%95%B0%E5%8E%9F%E7%90%86/2021-08-13-15-29-55.png"><br>可以看到，_IO_read_ptr所指向的内容发生变化：运行ungetc()之后指针减一，相当于取消了之前getc()调用。</p>
-<h3 id="调用fgets"><a href="#调用fgets" class="headerlink" title="调用fgets()"></a>调用fgets()</h3><p><img src="/2021/08/13/%E5%88%A9%E7%94%A8GDB%E5%B7%A5%E5%85%B7%E5%88%86%E6%9E%90ungetc-%E5%87%BD%E6%95%B0%E5%8E%9F%E7%90%86/2021-08-13-15-36-39.png"></p>
-<h3 id="执行getc-函数"><a href="#执行getc-函数" class="headerlink" title="执行getc()函数"></a>执行getc()函数</h3><p><img src="/2021/08/13/%E5%88%A9%E7%94%A8GDB%E5%B7%A5%E5%85%B7%E5%88%86%E6%9E%90ungetc-%E5%87%BD%E6%95%B0%E5%8E%9F%E7%90%86/2021-08-13-15-39-41.png"><br>可以看到-已经从缓冲区被读出，因为_IO_file_ptr指向的第一个字符由-变为相邻的下一个字符b（对比上一图中）。</p>
-<h3 id="接着执行ungetc-函数"><a href="#接着执行ungetc-函数" class="headerlink" title="接着执行ungetc()函数"></a>接着执行ungetc()函数</h3><p><img src="/2021/08/13/%E5%88%A9%E7%94%A8GDB%E5%B7%A5%E5%85%B7%E5%88%86%E6%9E%90ungetc-%E5%87%BD%E6%95%B0%E5%8E%9F%E7%90%86/2021-08-13-15-42-41.png"><br>可以看出，<em>IO_read</em>*相关的指针都改变了，查看_IO_file_ptr指针指向的内存区域附近：</p>
-<p><img src="/2021/08/13/%E5%88%A9%E7%94%A8GDB%E5%B7%A5%E5%85%B7%E5%88%86%E6%9E%90ungetc-%E5%87%BD%E6%95%B0%E5%8E%9F%E7%90%86/2021-08-13-15-44-29.png"><br>现在_IO_file_ptr指针指向的内存区域就一个”+”字符</p>
-<h3 id="执行fputs"><a href="#执行fputs" class="headerlink" title="执行fputs()"></a>执行fputs()</h3><p>stdout输出：</p>
-<p><img src="/2021/08/13/%E5%88%A9%E7%94%A8GDB%E5%B7%A5%E5%85%B7%E5%88%86%E6%9E%90ungetc-%E5%87%BD%E6%95%B0%E5%8E%9F%E7%90%86/2021-08-13-15-51-14.png"></p>
-<p>fp指向内存区域内容：</p>
-<p><img src="/2021/08/13/%E5%88%A9%E7%94%A8GDB%E5%B7%A5%E5%85%B7%E5%88%86%E6%9E%90ungetc-%E5%87%BD%E6%95%B0%E5%8E%9F%E7%90%86/2021-08-13-15-50-13.png"></p>
-<p>可以看到,_IO_file_ptr指向了”-c”,这说明,这说明，glibc首先去地址0x55555556c53f读取了字符”+”，接着再回到0x55555556b0a3读取了”b”,然后将他们输出到屏幕上。</p>
-<p>对于file.txt的第三行也是同理，这里不再赘述。</p>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>通过上面分析可以发现，如果getc函数会使_IO_file_ptr加一，类似于：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">getc</span><span class="params">(FILE* fp)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    fp-&gt;_IO_file_ptr++;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>而ungetc()则分两种情况：</p>
-<ol>
-<li>ungetc字符和getc()读取的字符(或者_IO_file_ptr指向字符的前一个字符)一样,那么该函数将_IO_file_ptr减一</li>
-<li>如果ungetc传入的字符与getc()读取的字符(或者_IO_file_ptr指向字符的前一个字符)不一致，那么_IO_file_*系列指针都将指向另一片不同的内存区域，_IO_file_ptr指向的字符正是ungetc传入的字符。</li>
-</ol>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">ungetc</span><span class="params">(<span class="keyword">int</span> ch, FILE* fp)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(ch==*(fp-&gt;_IO_file_ptr<span class="number">-1</span>))</span><br><span class="line">    &#123;</span><br><span class="line">        fp-&gt;_IO_file_ptr--;</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="comment">//change _IO_file_*</span></span><br><span class="line">        *_IO_file_ptr=ch;</span><br><span class="line">        <span class="comment">//make some mark, after read this area, change _IO_file_* back</span></span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>需要注意，ungetc()改变了_IO_file_* 系列指针，GLIBC 肯定是做了标记的，再读取完之后，<em>IO_file</em>* 指针将变回原来的值，以保持对程序员的透明。</p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/08/13/ungetc%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="John Doe">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Hexo">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/08/13/ungetc%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/" class="post-title-link" itemprop="url">ungetc原理分析</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2021-08-13 11:27:27 / Modified: 11:39:46" itemprop="dateCreated datePublished" datetime="2021-08-13T11:27:27+08:00">2021-08-13</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p><img src="/2021-08-13-11-35-51.png"></p>
-<p><img src="/2021-08-13-11-36-45.png">!<br><a href="2021-08-13-11-39-00.png"></a></p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/08/12/%E5%9C%A8%E5%91%BD%E4%BB%A4%E8%A1%8C%E4%B8%ADgit-push-visual-studio%E9%A1%B9%E7%9B%AE%E5%87%BA%E7%8E%B0timeout%E9%94%99%E8%AF%AF%E6%88%96%E8%80%85SSL%E9%94%99%E8%AF%AF/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="John Doe">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Hexo">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/08/12/%E5%9C%A8%E5%91%BD%E4%BB%A4%E8%A1%8C%E4%B8%ADgit-push-visual-studio%E9%A1%B9%E7%9B%AE%E5%87%BA%E7%8E%B0timeout%E9%94%99%E8%AF%AF%E6%88%96%E8%80%85SSL%E9%94%99%E8%AF%AF/" class="post-title-link" itemprop="url">在命令行中git push visual studio项目出现timeout错误或者SSL错误</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2021-08-12 21:09:27 / Modified: 21:11:04" itemprop="dateCreated datePublished" datetime="2021-08-12T21:09:27+08:00">2021-08-12</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>原因是没有关闭Vsiual Studio，可能命令行的git和vs自带的git存在冲突，关闭VS即可解决。</p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/08/12/p5/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="John Doe">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Hexo">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/08/12/p5/" class="post-title-link" itemprop="url">p5</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-08-12 15:50:31" itemprop="dateCreated datePublished" datetime="2021-08-12T15:50:31+08:00">2021-08-12</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -960,12 +1136,12 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">18</span>
+          <span class="site-state-item-count">16</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
-        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-count">12</span>
         <span class="site-state-item-name">tags</span>
       </div>
   </nav>

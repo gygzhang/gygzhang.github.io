@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. Using RAII to wait for a thread to complete一个线程必须调用join()，或者detach(), detach 一般直接使用，但是join()就不是这样。如果在新的线程中有异常发生，join()可能就不会被调用。 用RAII可以避免使用try...catch语句来处理异常。  1234567891011121314151617181920212223">
+<meta property="og:type" content="article">
+<meta property="og:title" content="c++多线程-线程管理">
+<meta property="og:url" content="http://example.com/2022/07/25/c-%E5%A4%9A%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E7%AE%A1%E7%90%86/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="1. Using RAII to wait for a thread to complete一个线程必须调用join()，或者detach(), detach 一般直接使用，但是join()就不是这样。如果在新的线程中有异常发生，join()可能就不会被调用。 用RAII可以避免使用try...catch语句来处理异常。  1234567891011121314151617181920212223">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2022-07-25T11:17:30.000Z">
+<meta property="article:modified_time" content="2022-07-27T11:58:11.650Z">
+<meta property="article:author" content="John Doe">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2022/07/25/c-%E5%A4%9A%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E7%AE%A1%E7%90%86/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>c++多线程-线程管理 | Hexo</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Hexo</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/07/25/c-%E5%A4%9A%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E7%AE%A1%E7%90%86/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          c++多线程-线程管理
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-07-25 19:17:30" itemprop="dateCreated datePublished" datetime="2022-07-25T19:17:30+08:00">2022-07-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-07-27 19:58:11" itemprop="dateModified" datetime="2022-07-27T19:58:11+08:00">2022-07-27</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="1-Using-RAII-to-wait-for-a-thread-to-complete"><a href="#1-Using-RAII-to-wait-for-a-thread-to-complete" class="headerlink" title="1. Using RAII to wait for a thread to complete"></a>1. Using RAII to wait for a thread to complete</h2><pre><code>一个线程必须调用join()，或者detach(), detach 一般直接使用，但是join()就不是这样。如果在新的线程中有异常发生，join()可能就不会被调用。
+用RAII可以避免使用try...catch语句来处理异常。
+</code></pre>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">thread_guard</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    std::thread&amp; t;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="function"><span class="keyword">explicit</span> <span class="title">thread_guard</span><span class="params">(std::thread&amp; t_)</span>:</span></span><br><span class="line"><span class="function">    t(t_)</span></span><br><span class="line"><span class="function">    &#123;</span>&#125;</span><br><span class="line">    ~<span class="built_in">thread_guard</span>()</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span>(t.<span class="built_in">joinable</span>())</span><br><span class="line">        &#123;</span><br><span class="line">            t.<span class="built_in">join</span>();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">thread_guard</span>(thread_guard <span class="keyword">const</span>&amp;)=<span class="keyword">delete</span>;</span><br><span class="line">    thread_guard&amp; <span class="keyword">operator</span>=(thread_guard <span class="keyword">const</span>&amp;)=<span class="keyword">delete</span>;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">func</span>;</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">f</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> some_local_state=<span class="number">0</span>;</span><br><span class="line">    <span class="function">func <span class="title">my_func</span><span class="params">(some_local_state)</span></span>;</span><br><span class="line">    <span class="function">std::thread <span class="title">t</span><span class="params">(my_func)</span></span>;</span><br><span class="line">    <span class="function">thread_guard <span class="title">g</span><span class="params">(t)</span></span>;</span><br><span class="line">    <span class="built_in">do_something_in_current_thread</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="2-Passing-arguments-to-a-thread-function"><a href="#2-Passing-arguments-to-a-thread-function" class="headerlink" title="2. Passing arguments to a thread function"></a>2. Passing arguments to a thread function</h2><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">f</span><span class="params">(<span class="keyword">int</span> i,std::string <span class="keyword">const</span>&amp; s)</span></span>;</span><br><span class="line"><span class="function">std::thread <span class="title">t</span><span class="params">(f,<span class="number">3</span>,”hello”)</span></span>;</span><br></pre></td></tr></table></figure>
+<pre><code>c++首先会把`&quot;heelo&quot;`复制到新的线程的堆栈，然后进行类型转换（尽管f的参数是一个引用）。
+</code></pre>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">f</span><span class="params">(<span class="keyword">int</span> i,std::string <span class="keyword">const</span>&amp; s)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">oops</span><span class="params">(<span class="keyword">int</span> some_param)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">char</span> buffer[<span class="number">1024</span>];</span><br><span class="line">    <span class="built_in">sprintf</span>(buffer, <span class="string">&quot;%i&quot;</span>,some_param);</span><br><span class="line">    <span class="function">std::thread <span class="title">t</span><span class="params">(f,<span class="number">3</span>,buffer)</span></span>;</span><br><span class="line">    t.<span class="built_in">detach</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<pre><code>如果是传递指针，是非常危险的，因为新的线程在进行类型转换的时候，oops()可能已经退出了，因此buffer应该已经变成了一个dangling pointer了，访问它大概率会出发段错误。避免方法如下：
+</code></pre>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">f</span><span class="params">(<span class="keyword">int</span> i,std::string <span class="keyword">const</span>&amp; s)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">not_oops</span><span class="params">(<span class="keyword">int</span> some_param)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">char</span> buffer[<span class="number">1024</span>];</span><br><span class="line">    <span class="built_in">sprintf</span>(buffer,<span class="string">&quot;%i&quot;</span>,some_param);</span><br><span class="line">    <span class="function">std::thread <span class="title">t</span><span class="params">(f,<span class="number">3</span>,std::string(buffer))</span></span>;</span><br><span class="line">    t.<span class="built_in">detach</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="3-std-bind和std-thread的特性"><a href="#3-std-bind和std-thread的特性" class="headerlink" title="3. std::bind和std::thread的特性"></a>3. std::bind和std::thread的特性</h2><p>因为给std::bind 和 std::thread传递参数时，即使函数的形参类型是一个引用，他们也会使用拷贝函数拷贝传入实参（C++觉得大多数情况应该这样做），这个时候如果我们确实需要使用引用，使用std::ref即可。</p>
+<p>参考：<br><a target="_blank" rel="noopener" href="https://murphypei.github.io/blog/2019/04/cpp-std-ref">C++11 的 std::ref 用法</a></p>
+<p>而且std::bind 和 std::thread的机制是差不多的，比如：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">X</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">do_lengthy_work</span><span class="params">()</span></span>;</span><br><span class="line">&#125;;</span><br><span class="line">X my_x;</span><br><span class="line"><span class="function">std::thread <span class="title">t</span><span class="params">(&amp;X::do_lengthy_work,&amp;my_x)</span></span>;</span><br></pre></td></tr></table></figure>
+<p>可以使用类的方法指针作为thread的函数，将对象指针作为参数。</p>
+<hr>
+<h3 id="3-1-当参数不能复制只能移动时"><a href="#3-1-当参数不能复制只能移动时" class="headerlink" title="3.1. 当参数不能复制只能移动时"></a>3.1. 当参数不能复制只能移动时</h3><blockquote>
+<p>不能复制只能移动是指：一个对象持有的数据转移到另一个对象时，原对象此时就不再指向这个数据。</p>
+</blockquote>
+<p>一个例子是std::unique_ptr, 同一时间只有一个std::unique_ptr可以持有一个对象，当std::unique_ptr对销毁，它指向的对象也会被销毁。可以使用移动构造函数和移动赋值运算符来在不同的std::unique_ptr之间转移一个对象的所有权（所有权从std::unique_ptr转移之后，该指针为nullptr）。</p>
+<p>当参数不能复制只能移动时，应该使用std::move将该一个对象的所有权叫给线程：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">process_big_object</span><span class="params">(std::unique_ptr&lt;big_object&gt;)</span></span>;</span><br><span class="line"><span class="function">std::unique_ptr&lt;big_object&gt; <span class="title">p</span><span class="params">(<span class="keyword">new</span> big_object)</span></span>;</span><br><span class="line">p-&gt;<span class="built_in">prepare_data</span>(<span class="number">42</span>);</span><br><span class="line"><span class="function">std::thread <span class="title">t</span><span class="params">(process_big_object,std::move(p))</span></span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="转移对象的所有权"><a href="#转移对象的所有权" class="headerlink" title="转移对象的所有权"></a>转移对象的所有权</h3><p>在C++标准库中，有许多资源持有对象（std::ifstream, std::unique_ptr等）都是可以移动但是不能复制的, 而std::thread也是其中一员。<br>因此如果要转移std::thread对象的所有权，示例如下:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">some_function</span><span class="params">()</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">some_other_function</span><span class="params">()</span></span>;</span><br><span class="line"><span class="function">std::thread <span class="title">t1</span><span class="params">(some_function)</span></span>;</span><br><span class="line">std::thread t2=std::<span class="built_in">move</span>(t1);</span><br><span class="line">t1=std::<span class="built_in">thread</span>(some_other_function);</span><br><span class="line">std::thread t3;</span><br><span class="line">t3=std::<span class="built_in">move</span>(t2);</span><br><span class="line">t1=std::<span class="built_in">move</span>(t3);</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>scoped_thread 例子</p>
+</blockquote>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">scoped_thread</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    std::thread t;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="function"><span class="keyword">explicit</span> <span class="title">scoped_thread</span><span class="params">(std::thread t_)</span>:</span></span><br><span class="line"><span class="function">        t(std::move(t_))</span></span><br><span class="line"><span class="function">    &#123;</span></span><br><span class="line">    <span class="keyword">if</span>(!t.<span class="built_in">joinable</span>())</span><br><span class="line">        <span class="keyword">throw</span> std::<span class="built_in">logic_error</span>(“No thread”);</span><br><span class="line">    &#125;</span><br><span class="line">    ~<span class="built_in">scoped_thread</span>()</span><br><span class="line">    &#123;</span><br><span class="line">        t.<span class="built_in">join</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">scoped_thread</span>(scoped_thread <span class="keyword">const</span>&amp;)=<span class="keyword">delete</span>;</span><br><span class="line">    scoped_thread&amp; <span class="keyword">operator</span>=(scoped_thread <span class="keyword">const</span>&amp;)=<span class="keyword">delete</span>;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">func</span>;</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">f</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> some_local_state;</span><br><span class="line">    <span class="function">scoped_thread <span class="title">t</span><span class="params">(std::thread(func(some_local_state)))</span></span>;</span><br><span class="line">    <span class="built_in">do_something_in_current_thread</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="产生多个线程并且等待完成"><a href="#产生多个线程并且等待完成" class="headerlink" title="产生多个线程并且等待完成"></a>产生多个线程并且等待完成</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">do_work</span><span class="params">(<span class="keyword">unsigned</span> id)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">f</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    std::vector&lt;std::thread&gt; threads;</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">unsigned</span> i=<span class="number">0</span>;i&lt;<span class="number">20</span>;++i)</span><br><span class="line">    &#123;</span><br><span class="line">        threads.<span class="built_in">push_back</span>(std::<span class="built_in">thread</span>(do_work,i));</span><br><span class="line">    &#125;</span><br><span class="line">    std::for_each(threads.<span class="built_in">begin</span>(),threads.<span class="built_in">end</span>(),</span><br><span class="line">        std::<span class="built_in">mem_fn</span>(&amp;std::thread::join));</span><br><span class="line">        <span class="comment">//函数模板 std::mem_fn 生成指向成员指针的包装对象，</span></span><br><span class="line">        <span class="comment">//它可以存储、复制及调用指向成员指针。</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h3 id="在运行时选择线程数"><a href="#在运行时选择线程数" class="headerlink" title="在运行时选择线程数"></a>在运行时选择线程数</h3><p>std::thread::hardware_concurrency()函数可以获取可并行的线程数(一般等于CPU核数)。</p>
+<h3 id="线程标识符"><a href="#线程标识符" class="headerlink" title="线程标识符"></a>线程标识符</h3><ol>
+<li>std::thread::get_id()</li>
+<li>std::this_thread::get_id()<br>e.g. <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">std::thread::id master_thread;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">some_core_part_of_algorithm</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(std::this_thread::<span class="built_in">get_id</span>()==master_thread)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="built_in">do_master_thread_work</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">do_common_work</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ol>
+<p><del>The world is flat.</del></p>
+<blockquote>
+<p>blockquote</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Syntax</th>
+<th>Description</th>
+<th>sd</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Header</td>
+<td>Title</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Paragraph</td>
+<td>Text</td>
+<td>-</td>
+</tr>
+</tbody></table>
+<ul>
+<li><input checked="" disabled="" type="checkbox"> Write the press release</li>
+<li><input checked="" disabled="" type="checkbox"> Update the website</li>
+<li><input checked="" disabled="" type="checkbox"> Contact the media</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/07/25/muduo%E5%AD%A6%E4%B9%A0-%E5%9F%BA%E7%A1%80/" rel="prev" title="muduo学习-基础">
+      <i class="fa fa-chevron-left"></i> muduo学习-基础
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/07/27/%E7%8E%B0%E4%BB%A3C-%E5%9F%BA%E7%A1%80/" rel="next" title="现代C++基础">
+      现代C++基础 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-Using-RAII-to-wait-for-a-thread-to-complete"><span class="nav-number">1.</span> <span class="nav-text">1. Using RAII to wait for a thread to complete</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-Passing-arguments-to-a-thread-function"><span class="nav-number">2.</span> <span class="nav-text">2. Passing arguments to a thread function</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-std-bind%E5%92%8Cstd-thread%E7%9A%84%E7%89%B9%E6%80%A7"><span class="nav-number">3.</span> <span class="nav-text">3. std::bind和std::thread的特性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E5%BD%93%E5%8F%82%E6%95%B0%E4%B8%8D%E8%83%BD%E5%A4%8D%E5%88%B6%E5%8F%AA%E8%83%BD%E7%A7%BB%E5%8A%A8%E6%97%B6"><span class="nav-number">3.1.</span> <span class="nav-text">3.1. 当参数不能复制只能移动时</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E7%A7%BB%E5%AF%B9%E8%B1%A1%E7%9A%84%E6%89%80%E6%9C%89%E6%9D%83"><span class="nav-number">3.2.</span> <span class="nav-text">转移对象的所有权</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BA%A7%E7%94%9F%E5%A4%9A%E4%B8%AA%E7%BA%BF%E7%A8%8B%E5%B9%B6%E4%B8%94%E7%AD%89%E5%BE%85%E5%AE%8C%E6%88%90"><span class="nav-number">3.3.</span> <span class="nav-text">产生多个线程并且等待完成</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%A8%E8%BF%90%E8%A1%8C%E6%97%B6%E9%80%89%E6%8B%A9%E7%BA%BF%E7%A8%8B%E6%95%B0"><span class="nav-number">3.4.</span> <span class="nav-text">在运行时选择线程数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E6%A0%87%E8%AF%86%E7%AC%A6"><span class="nav-number">3.5.</span> <span class="nav-text">线程标识符</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">John Doe</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">John Doe</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
