@@ -145,97 +145,6 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/19/xv6%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE%E6%A0%88%E5%AE%9E%E7%8E%B0%E5%88%86%E6%9E%90/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="John Doe">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Hexo">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/03/19/xv6%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE%E6%A0%88%E5%AE%9E%E7%8E%B0%E5%88%86%E6%9E%90/" class="post-title-link" itemprop="url">xv6网络协议栈实现分析</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2022-03-19 10:17:33 / Modified: 13:50:16" itemprop="dateCreated datePublished" datetime="2022-03-19T10:17:33+08:00">2022-03-19</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>最近做了xv6的实验:<br><a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/labs/net.html">Lab: networking</a></p>
-<p>实验要求还是很简单，对比了一下之前的实验，发现难度降低不是一点半点，所以就阅读了xv6内部的socket协议栈的实现。</p>
-<p>xv6和linux一样，都是一切皆文件，所以如果用户想要向<code>socket</code>读写数据，也是要调用<code>read/write</code>，而r/w在内核里面调用的是<code>fileread</code>和<code>filewrite</code>.</p>
-<p>以下是<code>read</code>的实现：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">uint64</span><br><span class="line">sys_read(void)</span><br><span class="line">&#123;</span><br><span class="line">  struct file *f;</span><br><span class="line">  int n;</span><br><span class="line">  uint64 p;</span><br><span class="line"></span><br><span class="line">  if(argfd(0, 0, &amp;f) &lt; 0 || argint(2, &amp;n) &lt; 0 || argaddr(1, &amp;p) &lt; 0)</span><br><span class="line">    return -1;</span><br><span class="line">  return fileread(f, p, n);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><code>write</code>类似.</p>
-<p>file结构体的定义如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">struct file &#123;</span><br><span class="line">#ifdef LAB_NET</span><br><span class="line">  enum &#123; FD_NONE, FD_PIPE, FD_INODE, FD_DEVICE, FD_SOCK &#125; type;</span><br><span class="line">#else</span><br><span class="line">  enum &#123; FD_NONE, FD_PIPE, FD_INODE, FD_DEVICE &#125; type;</span><br><span class="line">#endif</span><br><span class="line">  int ref; // reference count</span><br><span class="line">  char readable;</span><br><span class="line">  char writable;</span><br><span class="line">  struct pipe *pipe; // FD_PIPE</span><br><span class="line">  struct inode *ip;  // FD_INODE and FD_DEVICE</span><br><span class="line">#ifdef LAB_NET</span><br><span class="line">  struct sock *sock; // FD_SOCK</span><br><span class="line">#endif</span><br><span class="line">  uint off;          // FD_INODE</span><br><span class="line">  short major;       // FD_DEVICE</span><br><span class="line">&#125;;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<p>可以看到，file结构体内部有一个枚举变量type，当<code>fileread</code>检测到<code>fd-&gt;type</code>为<code>FD_SOCK</code>，即<code>socket</code>文件时，便会调用<code>sockread</code>来读取<code>socket</code>文件。</p>
-<p><code>sockread</code>首先会获取文件的锁，然后检测该socket文件对应的接收队列是否为空，如果为空，说明网卡还没有接收到数据，则进程应该进入睡眠状态，等待唤醒。  如果该socket的接收队列不为空，则从接收队列中pop一个消息，该消息对应的结构体为mbuf。定义如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">struct mbuf &#123;</span><br><span class="line">  struct mbuf  *next; // the next mbuf in the chain</span><br><span class="line">  char         *head; // the current start position of the buffer</span><br><span class="line">  unsigned int len;   // the length of the buffer</span><br><span class="line">  char         buf[MBUF_SIZE]; // the backing store</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-
-<p>获取消息后，就使用<code>copyout</code>函数将，消息从内核空间中复制到用户空间中。</p>
-<p>刚刚提到如果指定<code>socket</code>对应的接收队列为空，那么它怎么被唤醒的呢？</p>
-<p>为了搞清楚这个问题，我们首先来看网卡驱动程序，网络属于外部设备，所以如果有数据到来，网卡设备会以中断的方式通知CPU，cpu则会调用中断处理函数，网卡的中断处理函数为<code>e1000_intr()</code>,定义如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">void</span><br><span class="line">e1000_intr(void)</span><br><span class="line">&#123;</span><br><span class="line">  // tell the e1000 we&#x27;ve seen this interrupt;</span><br><span class="line">  // without this the e1000 won&#x27;t raise any</span><br><span class="line">  // further interrupts.</span><br><span class="line">  regs[E1000_ICR] = 0xffffffff;</span><br><span class="line"></span><br><span class="line">  e1000_recv();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>可以看到，中断函数将调用e1000_recv来接收到来的数据，这也是xv6实验要求我们实现的函数之一，通过查询手册，该函数实现如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">static void</span><br><span class="line">e1000_recv(void)</span><br><span class="line">&#123;</span><br><span class="line">  //</span><br><span class="line">  // Your code here.</span><br><span class="line">  //</span><br><span class="line">  // Check for packets that have arrived from the e1000</span><br><span class="line">  // Create and deliver an mbuf for each packet (using net_rx()).</span><br><span class="line">  //</span><br><span class="line">  //should recive all packets</span><br><span class="line">  while(1)&#123;</span><br><span class="line">    acquire(&amp;e1000_lock);</span><br><span class="line">    int index = (regs[E1000_RDT]+1)%RX_RING_SIZE;</span><br><span class="line">    if((rx_ring[index].status&amp;E1000_RXD_STAT_DD)==0)&#123;</span><br><span class="line">      release(&amp;e1000_lock);</span><br><span class="line">      return;</span><br><span class="line">    &#125;</span><br><span class="line">    rx_mbufs[index]-&gt;len = rx_ring[index].length;</span><br><span class="line">    release(&amp;e1000_lock);</span><br><span class="line">    net_rx(rx_mbufs[index]);</span><br><span class="line">    acquire(&amp;e1000_lock);</span><br><span class="line">    regs[E1000_RDT] = index;</span><br><span class="line">    rx_mbufs[index] = mbufalloc(0);</span><br><span class="line">    rx_ring[index].addr = (uint64)rx_mbufs[index]-&gt;head;</span><br><span class="line">    rx_ring[index].status = 0;</span><br><span class="line">    index = (regs[E1000_RDT]+1)%RX_RING_SIZE;</span><br><span class="line">    release(&amp;e1000_lock);</span><br><span class="line">    </span><br><span class="line">  &#125;</span><br><span class="line">  return;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>该函数用到了两个关键的数据结构。一个是rx_ring(接收环)的数组，其元素是rx_desc(接收描述符)，这两个数据结构都是和e1000网卡密切相关的，rx_ring就是一个循环数组，rx_desc内部有很多field，e1000网卡接收到数据之后，数据便是储存在rx_desc之中的。</p>
-<p>要读取数据，需要用到E1000_RDT这个寄存器，手册里面说的：<br>HARDWARE OWNS ALL DESCRIPTORS BETWEEN [HEAD AND TAIL].<br>结合HEAD和TAIL寄存器的说明，我们应该将HEAD初始化为0，TAIL初始化为环形数组的最后一个位置，这样硬件能将到来的网络包储存在HEAD和TAIL之间，如果收到一个packet，硬件就会将它放到HEAD指向的位置，由此应该用<code>(regs[E1000_RDT]+1)%RX_RING_SIZE</code>来读取接收到的数据包。</p>
-<p>重点是，网卡一次可能接收到了很多包，所以e1000_recv函数应该遍历在TAIL-&gt;HEAD之间所有的描述符，直到遇到一个描述符的状态域的E1000_RXD_STAT_DD为0，则表示所以数据都被读取完毕，应该返回。</p>
-<p>读取到的数据会传递给net_rx()函数，这个函数会将这个以太网数据包的头部提取出来，然后判断上层协议类型是什么(xv6协议栈支持IP,ARP)，代码如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">void net_rx(struct mbuf *m)</span><br><span class="line">&#123;</span><br><span class="line">  struct eth *ethhdr;</span><br><span class="line">  uint16 type;</span><br><span class="line"></span><br><span class="line">  ethhdr = mbufpullhdr(m, *ethhdr);</span><br><span class="line">  if (!ethhdr) &#123;</span><br><span class="line">    mbuffree(m);</span><br><span class="line">    return;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  type = ntohs(ethhdr-&gt;type);</span><br><span class="line">  if (type == ETHTYPE_IP)</span><br><span class="line">    net_rx_ip(m);</span><br><span class="line">  else if (type == ETHTYPE_ARP)</span><br><span class="line">    net_rx_arp(m);</span><br><span class="line">  else</span><br><span class="line">    mbuffree(m);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>我们假设这个以太网的上层协议是ip，那么接下来，应该判断ip数据报的上层协议了，xv6的实现只支持udp。因此，在<code>net_rx_ip</code>函数内部会调用<code>net_rx_udp</code>函数.</p>
-<p>这个函数会解析udp数据包的头部，然后转到sockrecvudp()函数，该函数的定义如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">// called by protocol handler layer to deliver UDP packets</span><br><span class="line">void</span><br><span class="line">sockrecvudp(struct mbuf *m, uint32 raddr, uint16 lport, uint16 rport)</span><br><span class="line">&#123;</span><br><span class="line">  //</span><br><span class="line">  // Find the socket that handles this mbuf and deliver it, waking</span><br><span class="line">  // any sleeping reader. Free the mbuf if there are no sockets</span><br><span class="line">  // registered to handle it.</span><br><span class="line">  //</span><br><span class="line">  struct sock *si;</span><br><span class="line"></span><br><span class="line">  acquire(&amp;lock);</span><br><span class="line">  si = sockets;</span><br><span class="line">  while (si) &#123;</span><br><span class="line">    if (si-&gt;raddr == raddr &amp;&amp; si-&gt;lport == lport &amp;&amp; si-&gt;rport == rport)</span><br><span class="line">      goto found;</span><br><span class="line">    si = si-&gt;next;</span><br><span class="line">  &#125;</span><br><span class="line">  release(&amp;lock);</span><br><span class="line">  mbuffree(m);</span><br><span class="line">  return;</span><br><span class="line"></span><br><span class="line">found:</span><br><span class="line">  acquire(&amp;si-&gt;lock);</span><br><span class="line">  mbufq_pushtail(&amp;si-&gt;rxq, m);</span><br><span class="line">  wakeup(&amp;si-&gt;rxq);</span><br><span class="line">  release(&amp;si-&gt;lock);</span><br><span class="line">  release(&amp;lock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>这个函数用了到<code>sockets</code>，这是一个链表，内核中所有的<code>socket</code>都被链接到这个<code>sockets</code>链表上。这个函数遍历这个链表，如果发现有<code>socket</code>的地址和端口号符合刚刚在<code>net_rx_udp()</code>中解析得到的地址和端口号，则会将消息推进该<code>socket</code>对应的接收缓冲区之中，然后唤醒之前因为没有缓冲区为空而睡眠的进程。</p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
     <link itemprop="mainEntityOfPage" href="http://example.com/2021/08/17/exec%E5%87%BD%E6%95%B0%E7%B0%87%E5%A6%82%E4%BD%95%E8%AE%B0%E5%BF%86/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -598,12 +507,12 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">15</span>
+          <span class="site-state-item-count">14</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
-        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-count">10</span>
         <span class="site-state-item-name">tags</span>
       </div>
   </nav>
