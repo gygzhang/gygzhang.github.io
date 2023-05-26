@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="什么是prefix scan前缀和是一个很常见的操作，刷LC的时候，也有很多题需要用到前缀和，以达到减少计算量的效果，最近一次用到前缀和是在写SPGEMM的时候，在symbolic阶段，我们计算出了一个长度为m的向量nnz，nnz[i]表示结果C中第i行有多少个非零的结果，需要计算的矩阵C需要按CSR格式储存，其中col和val数组被分成多个段，每一个段代表对应稠密的一行，而段的起始和结束位置由r">
+<meta property="og:type" content="article">
+<meta property="og:title" content="CUDA prefix scan优化笔记">
+<meta property="og:url" content="http://example.com/2023/04/25/CUDA-prefix-scan%E4%BC%98%E5%8C%96%E7%AC%94%E8%AE%B0/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="什么是prefix scan前缀和是一个很常见的操作，刷LC的时候，也有很多题需要用到前缀和，以达到减少计算量的效果，最近一次用到前缀和是在写SPGEMM的时候，在symbolic阶段，我们计算出了一个长度为m的向量nnz，nnz[i]表示结果C中第i行有多少个非零的结果，需要计算的矩阵C需要按CSR格式储存，其中col和val数组被分成多个段，每一个段代表对应稠密的一行，而段的起始和结束位置由r">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/imgs/2023-04-25-20-31-00.png">
+<meta property="og:image" content="http://example.com/imgs/2023-04-25-20-31-26.png">
+<meta property="og:image" content="http://example.com/imgs/2023-04-25-22-08-29.png">
+<meta property="og:image" content="http://example.com/imgs/2023-04-25-22-31-03.png">
+<meta property="og:image" content="http://example.com/imgs/2023-04-25-22-32-04.png">
+<meta property="og:image" content="http://example.com/imgs/2023-04-25-22-32-57.png">
+<meta property="og:image" content="http://example.com/imgs/2023-04-26-00-17-27.png">
+<meta property="og:image" content="http://example.com/imgs/2023-04-26-01-01-08.png">
+<meta property="article:published_time" content="2023-04-25T12:11:31.000Z">
+<meta property="article:modified_time" content="2023-04-25T17:04:58.959Z">
+<meta property="article:author" content="John Doe">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/imgs/2023-04-25-20-31-00.png">
+
+<link rel="canonical" href="http://example.com/2023/04/25/CUDA-prefix-scan%E4%BC%98%E5%8C%96%E7%AC%94%E8%AE%B0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>CUDA prefix scan优化笔记 | Hexo</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Hexo</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/04/25/CUDA-prefix-scan%E4%BC%98%E5%8C%96%E7%AC%94%E8%AE%B0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          CUDA prefix scan优化笔记
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-04-25 20:11:31" itemprop="dateCreated datePublished" datetime="2023-04-25T20:11:31+08:00">2023-04-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-04-26 01:04:58" itemprop="dateModified" datetime="2023-04-26T01:04:58+08:00">2023-04-26</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="什么是prefix-scan"><a href="#什么是prefix-scan" class="headerlink" title="什么是prefix scan"></a>什么是prefix scan</h2><p>前缀和是一个很常见的操作，刷LC的时候，也有很多题需要用到前缀和，以达到减少计算量的效果，最近一次用到前缀和是在写SPGEMM的时候，在symbolic阶段，我们计算出了一个长度为m的向量nnz，nnz[i]表示结果C中第i行有多少个非零的结果，需要计算的矩阵C需要按CSR格式储存，其中col和val数组被分成多个段，每一个段代表对应稠密的一行，而段的起始和结束位置由row数组来指示，具体来说，row[i]表示起始位置，row[i+1]代表结束位置， 也就是<code>val[row[i]]</code> 至val<code>[row[i+1]]</code>是第i行的数据(注意不包括<code>[row[i+1]]</code>， 是一个左闭右开的区间)。 因此求前缀和就理所当然了，而且是exclusive scan, 因为第i个位置的结果<code>f[i]</code>不包含第i个输入。 <code>f[i]</code>可以理解为前i-1行有多少个非0元素。</p>
+<h2 id="double-buffered-version"><a href="#double-buffered-version" class="headerlink" title="double buffered version"></a>double buffered version</h2><p>首先是双缓冲版本：<br><img src="/../imgs/2023-04-25-20-31-00.png"></p>
+<p>示意图如下：<br><img src="/../imgs/2023-04-25-20-31-26.png"></p>
+<p>这是一个nlogn的算法，<br>证明如下：<br><img src="/../imgs/2023-04-25-22-08-29.png"></p>
+<p>第i次迭代，有2*(i-1)个结果被计算出来，所以下一次参与计算线程个数会减少2^(i-1)，因此第i次迭代，所有线程操作次数是2^M-2^(i-1)， i取值从0到M-1。</p>
+<p>代码如下：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">__global__ <span class="keyword">void</span> <span class="title">scan</span><span class="params">(<span class="keyword">float</span> *g_odata, <span class="keyword">float</span> *g_idata, <span class="keyword">int</span> n)</span> </span></span><br><span class="line"><span class="function"></span>&#123; </span><br><span class="line">    <span class="keyword">extern</span>  __shared__  <span class="keyword">float</span> temp[]; <span class="comment">// allocated on invocation </span></span><br><span class="line">    <span class="keyword">int</span> thid = threadIdx.x; </span><br><span class="line">    <span class="keyword">int</span> pout = <span class="number">0</span>, pin = <span class="number">1</span>; </span><br><span class="line">    <span class="comment">// load input into shared memory.  </span></span><br><span class="line">    <span class="comment">// This is exclusive scan, so shift right by one and set first elt to 0 </span></span><br><span class="line">    temp[pout*n + thid] = (thid &gt; <span class="number">0</span>) ? g_idata[thid<span class="number">-1</span>] : <span class="number">0</span>; </span><br><span class="line">    __syncthreads(); </span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> offset = <span class="number">1</span>; offset &lt; n; offset *= <span class="number">2</span>) </span><br><span class="line">    &#123; </span><br><span class="line">        pout = <span class="number">1</span> - pout; <span class="comment">// swap double buffer indices </span></span><br><span class="line">        <span class="comment">// 这里应该写错了， pin = 1-pin才对</span></span><br><span class="line">        pin  = <span class="number">1</span> - pout; </span><br><span class="line">        <span class="keyword">if</span> (thid &gt;= offset) </span><br><span class="line">            temp[pout*n+thid] += temp[pin*n+thid - offset]; </span><br><span class="line">        <span class="keyword">else</span> </span><br><span class="line">            temp[pout*n+thid] = temp[pin*n+thid]; </span><br><span class="line">        __syncthreads(); </span><br><span class="line">    &#125; </span><br><span class="line">    g_odata[thid] = temp[pout*n+thid1]; <span class="comment">// write output </span></span><br><span class="line">&#125; </span><br></pre></td></tr></table></figure>
+
+<p>上面这段算法问题在于复杂度不如串行低，而且只能处理一个block可以处理的数据，如果一个block最多可以有512个线程，那么数组长度最多为1024. 因此大佬提出了基于平衡树的算法。</p>
+<h2 id="work-efficient-算法"><a href="#work-efficient-算法" class="headerlink" title="work efficient 算法"></a>work efficient 算法</h2><h3 id="介绍"><a href="#介绍" class="headerlink" title="介绍"></a>介绍</h3><p>这个算法使用了平衡树，但是并不是在GPU上使用平衡树这种数据结构，而是用来决定每次迭代，每个线程应该做什么。说起来很抽象，看图应该很清晰。算法分为两个阶段。</p>
+<ul>
+<li>第一个阶段自底向上从叶子到根遍历，作用是构建部分和，每一个root的值都是其所有叶子节点之和。</li>
+<li>第二个阶段自顶向下从root到leaves遍历，根据partial sum来构建scan。</li>
+</ul>
+<h3 id="算法过程"><a href="#算法过程" class="headerlink" title="算法过程"></a>算法过程</h3><p>第一个阶段如下：<br><img src="/../imgs/2023-04-25-22-31-03.png"></p>
+<p>第二个阶段：<br><img src="/../imgs/2023-04-25-22-32-04.png"></p>
+<p>代码如下：<br><img src="/../imgs/2023-04-25-22-32-57.png"></p>
+<p>看这个代码的时候，觉得确实应该是这样，很巧妙，但是自己想肯定大概率是想不出来的。 分析一下代码，首先是每个线程加载2个元素到smem中，0号线程加载内存位置为0,1， 1号线程加载2，3，… 这样的模式，可以预见，应该是会产生bank conflict的，因为第16个线程会加载内存位置为32，33的元素，和0号线程加载的内存位置在同一个bank。 接下来，进入循环，</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">这里有一个假设，如果block中线程个数为<span class="number">512</span>， n一定是<span class="number">1024</span>, 第一轮肯定是相邻的元素相加，这会得到<span class="number">512</span>个结果，所以需要用<span class="number">512</span>个线程。</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> d = n&gt;&gt;<span class="number">1</span>; d &gt; <span class="number">0</span>; d &gt;&gt;= <span class="number">1</span>) <span class="comment">// build sum in place up the tree </span></span><br><span class="line">&#123; </span><br><span class="line">    __syncthreads(); </span><br><span class="line">    <span class="keyword">if</span> (thid &lt; d)    </span><br><span class="line">    &#123; </span><br><span class="line">        <span class="comment">// bi是线程要写入的数组下标， 可以观察到如果将线程id+1，那么</span></span><br><span class="line">        <span class="comment">// 第一轮迭代写入的下标就是2*(thid+1)， 第二轮迭代写入的下标bi会</span></span><br><span class="line">        <span class="comment">// 加倍，offset的作用就是这个，它每轮迭代会加倍，因此bi=offset*2*(thid+1)</span></span><br><span class="line">        <span class="comment">// 但是要注意， 下标是从0开始的，所以所有下标都要减1，而ai可以看出，和bi相差offset。因此ai=bi-offset</span></span><br><span class="line">        <span class="keyword">int</span> ai = offset*(<span class="number">2</span>*thid+<span class="number">1</span>)<span class="number">-1</span>; </span><br><span class="line">        <span class="keyword">int</span> bi = offset*(<span class="number">2</span>*thid+<span class="number">2</span>)<span class="number">-1</span>; </span><br><span class="line">        temp[bi] += temp[ai];         </span><br><span class="line">    &#125; </span><br><span class="line">    offset *= <span class="number">2</span>; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>接下来要清除temp的最后一个位置的元素。然后进行从root到leaves的遍历。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> d = <span class="number">1</span>; d &lt; n; d *= <span class="number">2</span>) <span class="comment">// traverse down tree &amp; build scan </span></span><br><span class="line">&#123; </span><br><span class="line">    offset &gt;&gt;= <span class="number">1</span>; </span><br><span class="line">    __syncthreads(); </span><br><span class="line">    <span class="keyword">if</span> (thid &lt; d) </span><br><span class="line">    &#123; </span><br><span class="line">        <span class="keyword">int</span> ai = offset*(<span class="number">2</span>*thid+<span class="number">1</span>)<span class="number">-1</span>; </span><br><span class="line">        <span class="comment">// int bi = offset*2*(thid+1)-1</span></span><br><span class="line">        <span class="keyword">int</span> bi = offset*(<span class="number">2</span>*thid+<span class="number">2</span>)<span class="number">-1</span>; </span><br><span class="line">        <span class="comment">// 因为没有用double buffer， 所以要先保存ai位置的值，然后再写这个位置</span></span><br><span class="line">        <span class="keyword">float</span> t   = temp[ai]; </span><br><span class="line">        <span class="comment">// 把root的值传到左孩子。</span></span><br><span class="line">        temp[ai]  = temp[bi]; </span><br><span class="line">        <span class="comment">// 把root和左孩子的和写到右孩子</span></span><br><span class="line">        temp[bi] += t; </span><br><span class="line">    &#125; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="解决bank-conflict"><a href="#解决bank-conflict" class="headerlink" title="解决bank conflict"></a>解决bank conflict</h3><p>这个代码有个问题需要解决，那就是bank conflict， 解决方案就是使用padding</p>
+<p><img src="/../imgs/2023-04-26-00-17-27.png"></p>
+<p>我们定义这样的宏：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SHARED_MEMORY_BANKS 32</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> LOG_MEM_BANKS 5</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ROW_BY_32(n) ((n) &gt;&gt; LOG_MEM_BANKS)</span></span><br></pre></td></tr></table></figure>
+<p>我们将smem抽象成int smem[][32], ROW_BY_32计算传入的地址属于smem的第几行。第几行。如果我们加了padding，那么smem的定义就会变成int smem[][33], 原本要访问的地址是n：</p>
+<ul>
+<li>如果属于第0行，那么加padding之后的地址应该变成n+0,</li>
+<li>如果属于第1行，那么加padding之后的地址应该变成n+1,</li>
+<li>如果属于第2行，那么加padding之后的地址应该变成n+2,</li>
+<li>以此类推…</li>
+</ul>
+<p>可以看出，如果数据有n行，就需要浪费n*4 byte的空间，虽然浪费了空间，但是避免了bank conflict，是一种以时间换空间的思想。一个block的线程是512的话，512/32=16，所以padding会占用64 byte的空间。</p>
+<p>一开始我们从全局内存加载数据到smem中的时候，每个线程加载两个相邻的数据，可以知道，第16个线程会加载第32，33个数据，第32个线程会加载第64,65个数据，因此发生了3-way bank conflict， 因此我们改变策略，我们知道，一个block的数据个数是线程个数的2倍，因此将数据分为两半，block的第i个线程加载第<code>g_data[0]</code>和<code>g_data[0+n/2]</code>， 这样可以保证一个warp访问的数据是连续的，因此不会发生bank conflict。代码如下</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> ai = threadID;</span><br><span class="line"><span class="keyword">int</span> bi = threadID + (n / <span class="number">2</span>);</span><br><span class="line"><span class="keyword">int</span> bankOffsetA = <span class="built_in">CONFLICT_FREE_OFFSET</span>(ai);</span><br><span class="line"><span class="keyword">int</span> bankOffsetB = <span class="built_in">CONFLICT_FREE_OFFSET</span>(bi);</span><br><span class="line">temp[ai + bankOffsetA] = input[ai];</span><br><span class="line">temp[bi + bankOffsetB] = input[bi];</span><br></pre></td></tr></table></figure>
+
+<p>root和leaves之间的代码：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> ai = offset*(<span class="number">2</span>*thid+<span class="number">1</span>)<span class="number">-1</span>; </span><br><span class="line"><span class="keyword">int</span> bi = offset*(<span class="number">2</span>*thid+<span class="number">2</span>)<span class="number">-1</span>; </span><br><span class="line">ai += <span class="built_in">CONFLICT_FREE_OFFSET</span>(ai); </span><br><span class="line">bi += <span class="built_in">CONFLICT_FREE_OFFSET</span>(bi);</span><br></pre></td></tr></table></figure>
+<p>假设offset=1, 那么ai=2*thid, 0~32线程访问的bi为1，3，5，…31,33,<br>三个线程会访问bank0：</p>
+<ul>
+<li>thid=0,  ai=0</li>
+<li>thid=16, ai=32</li>
+<li>thid=32, ai=64</li>
+</ul>
+<p>加了padding之后， ai = ai + ai/32</p>
+<ul>
+<li>thid=0,  ai=0  + 0 = 0</li>
+<li>thid=16, ai=32 + 1 = 33</li>
+<li>thid=32, ai=64 + 2 = 66</li>
+</ul>
+<p>可以看出，他们的bank分别变成了0,1,2，从而避免了bank conflict， bi同理。</p>
+<h3 id="任意大小的数据"><a href="#任意大小的数据" class="headerlink" title="任意大小的数据"></a>任意大小的数据</h3><p>上面的代码问题在于只能处理blockDim.x*2个数据，因此需要考虑更多数据如何设计算法，其实也很简单，因为可以将大的数组分为多个block，每个block单独处理，最后再设计一个kernel更新最终的答案。</p>
+<p>流程如下：<br><img src="/../imgs/2023-04-26-01-01-08.png"></p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="http://users.umiacs.umd.edu/~ramani/cmsc828e_gpusci/ScanTalk.pdf">http://users.umiacs.umd.edu/~ramani/cmsc828e_gpusci/ScanTalk.pdf</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/04/24/CUDA-reduce%E4%BC%98%E5%8C%96%E7%AC%94%E8%AE%B0/" rel="prev" title="CUDA reduce优化笔记">
+      <i class="fa fa-chevron-left"></i> CUDA reduce优化笔记
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2023/04/27/CUDA-SGEMM%E4%BC%98%E5%8C%96%E7%AC%94%E8%AE%B0/" rel="next" title="CUDA SGEMM优化笔记">
+      CUDA SGEMM优化笔记 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AFprefix-scan"><span class="nav-number">1.</span> <span class="nav-text">什么是prefix scan</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#double-buffered-version"><span class="nav-number">2.</span> <span class="nav-text">double buffered version</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#work-efficient-%E7%AE%97%E6%B3%95"><span class="nav-number">3.</span> <span class="nav-text">work efficient 算法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%8B%E7%BB%8D"><span class="nav-number">3.1.</span> <span class="nav-text">介绍</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%AE%97%E6%B3%95%E8%BF%87%E7%A8%8B"><span class="nav-number">3.2.</span> <span class="nav-text">算法过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3bank-conflict"><span class="nav-number">3.3.</span> <span class="nav-text">解决bank conflict</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%BB%E6%84%8F%E5%A4%A7%E5%B0%8F%E7%9A%84%E6%95%B0%E6%8D%AE"><span class="nav-number">3.4.</span> <span class="nav-text">任意大小的数据</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">John Doe</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">22</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">John Doe</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

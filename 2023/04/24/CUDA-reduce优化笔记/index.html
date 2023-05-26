@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="问题介绍reduce就是对一个数组的数据求sum, min, max, avg等操作，中文名叫规约，规约得到的结果数据维度应该是小于输入的的数据维度的。 reduce操作一般是一个memory-bound的kernel，算术强度(AI)很低，因此目标是提升peak bandwidth。 对于compute-bound的kernel，比如gemm，我们应该去实现peak GFLOPS&#x2F;s. kern">
+<meta property="og:type" content="article">
+<meta property="og:title" content="CUDA reduce优化笔记">
+<meta property="og:url" content="http://example.com/2023/04/24/CUDA-reduce%E4%BC%98%E5%8C%96%E7%AC%94%E8%AE%B0/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="问题介绍reduce就是对一个数组的数据求sum, min, max, avg等操作，中文名叫规约，规约得到的结果数据维度应该是小于输入的的数据维度的。 reduce操作一般是一个memory-bound的kernel，算术强度(AI)很低，因此目标是提升peak bandwidth。 对于compute-bound的kernel，比如gemm，我们应该去实现peak GFLOPS&#x2F;s. kern">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/imgs/2023-04-24-21-10-39.png">
+<meta property="og:image" content="http://example.com/imgs/2023-04-24-21-16-12.png">
+<meta property="og:image" content="http://example.com/imgs/2023-04-24-21-50-16.png">
+<meta property="og:image" content="http://example.com/imgs/2023-04-24-21-57-40.png">
+<meta property="og:image" content="http://example.com/imgs/2023-04-24-22-08-29.png">
+<meta property="og:image" content="http://example.com/imgs/2023-04-24-22-27-46.png">
+<meta property="og:image" content="http://example.com/imgs/2023-04-24-22-59-32.png">
+<meta property="og:image" content="http://example.com/imgs/2023-04-24-23-13-21.png">
+<meta property="article:published_time" content="2023-04-24T13:03:25.000Z">
+<meta property="article:modified_time" content="2023-05-26T18:13:09.707Z">
+<meta property="article:author" content="John Doe">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/imgs/2023-04-24-21-10-39.png">
+
+<link rel="canonical" href="http://example.com/2023/04/24/CUDA-reduce%E4%BC%98%E5%8C%96%E7%AC%94%E8%AE%B0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>CUDA reduce优化笔记 | Hexo</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Hexo</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/04/24/CUDA-reduce%E4%BC%98%E5%8C%96%E7%AC%94%E8%AE%B0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          CUDA reduce优化笔记
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-04-24 21:03:25" itemprop="dateCreated datePublished" datetime="2023-04-24T21:03:25+08:00">2023-04-24</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-05-27 02:13:09" itemprop="dateModified" datetime="2023-05-27T02:13:09+08:00">2023-05-27</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h3 id="问题介绍"><a href="#问题介绍" class="headerlink" title="问题介绍"></a>问题介绍</h3><p>reduce就是对一个数组的数据求sum, min, max, avg等操作，中文名叫规约，规约得到的结果数据维度应该是小于输入的的数据维度的。</p>
+<p>reduce操作一般是一个memory-bound的kernel，算术强度(AI)很低，因此目标是提升peak bandwidth。 对于compute-bound的kernel，比如gemm，我们应该去实现peak GFLOPS/s.</p>
+<h3 id="kernel-1-naive实现"><a href="#kernel-1-naive实现" class="headerlink" title="kernel 1 naive实现"></a>kernel 1 naive实现</h3><p>第一个kernel如下：</p>
+<p><img src="/../imgs/2023-04-24-21-10-39.png"></p>
+<p>这个问题在于判断会导致warp divergent, 以及取模操作非常耗费cycle。<br>warp divergent指一个warp内的线程只有满足条件的线程会执行if内的语句，其他线程则处于idle状态，这些idle线程会占用宝贵的硬件资源，数据规模小的时候问题不大，因为硬件够用，但是一般用cuda都是大规模数据，因此必须消除这种divergent。</p>
+<h3 id="kernel-2-避免warp-divergent"><a href="#kernel-2-避免warp-divergent" class="headerlink" title="kernel 2 避免warp divergent"></a>kernel 2 避免warp divergent</h3><p>第二个kernel如下：<br><img src="/../imgs/2023-04-24-21-16-12.png"></p>
+<p>干活的线程个数其实没有变，只是将任务分配给具有连续全局id的线程，换句话说，将全局id连续的线程映射到需要处理的任务， 而之前是则不是这样，第一次循环，干活的线程id相差2， 第二次循环，干活的线程id相差4。 因为从0开始，每32个全局id连续的线程，它们是在同一个warp内的。因此， 除非需要处理的任务小于32个， 否则是不会发生warp divergent。 但是这样会带来新的问题, bank conflict.</p>
+<h3 id="kernel-3-避免bank-conflict"><a href="#kernel-3-避免bank-conflict" class="headerlink" title="kernel 3 避免bank conflict"></a>kernel 3 避免bank conflict</h3><p>shared memory虽然很快，但是容易产生bank conflict。将shared memory可以想象成被组织成int smem[][32], smem数组的32列就是32个bank， 一个warp内的两个线程，如果访问一个bank内的不同地址，就会发生bank conflict。</p>
+<p>对于kernel2， 第一轮迭代，<code>index=2*1*tid</code>, 对于一个warp中的32个线程，线程0，和线程16， 他们要访问的地址分别是0， 32， 对应到smen上，就是smem[0][0], smem[1][0], 他们位于同一个bank，因此会发生2-way bank conflict。第二轮迭代中， <code>index=2*2*tid</code>, warp中的32线程，线程0，8，16，32会访问一个bank的数据，因此发生了4-way的conflict。以此类推。</p>
+<p>下面这样，即可避免bank conflict：<br><img src="/../imgs/2023-04-24-21-50-16.png"></p>
+<p>这样之所以可以避免bank conflict， 是因为之前写smem不是连续的，同一个warp都乘了2的幂， 因此会发生bank conflict， 修改之后使用tid作为smem写入时的下标，对于一个warp，它们写入的是连续的地址，不会bank conflict。示意图如下所示：<br><img src="/../imgs/2023-04-24-21-57-40.png"></p>
+<h3 id="kernel-4-make-idle-thread-do-more"><a href="#kernel-4-make-idle-thread-do-more" class="headerlink" title="kernel 4 make idle thread do more"></a>kernel 4 make idle thread do more</h3><p>加下来的问题是第一次迭代时，有一半的线程都处于空闲状态，这样是非常浪费的。</p>
+<p><img src="/../imgs/2023-04-24-22-08-29.png"></p>
+<p>这个优化，个人觉得是提高创建线程的性价比，修改之前，空闲的线程的唯一作用就是从global mem加载一个数据到smem。修改之后，每个线程加载两个数据，除此 之外，还做了一次加法。 要注意，因为每个线程现在处理两个数据，而BLOCKSIZE又没有变，因此，BLOCK个数要减半。</p>
+<h3 id="kernel-循环展开"><a href="#kernel-循环展开" class="headerlink" title="kernel 循环展开"></a>kernel 循环展开</h3><p>循环展开是一个很通用的优化手段，对于循环体内指令很少的kernel来说，循环控制部分的开销是不能忽略的，展开之后，可以有效的降低循环控制部分的占比。此外计算地址的开销也可以避免。 但是也不是展开了就一定好，展开过多可能会导致I-CACHE抖动（这个时候程序的瓶颈可能就在Instruction Fetch），或者寄存器不够，将数据写到local memory， local memory也是out of chip， 具有和globalmemory一样慢的速度。 具体如下：</p>
+<p><img src="/../imgs/2023-04-24-22-27-46.png"></p>
+<p>当s&lt;=32， 只有一个warp在干活，但是__syncthreads()会在所有block的所有warp之间同步，warp在一个simd单元上工作，本身就是同步，因此工作任务小于warpsize的时候，__syncthreads()完全没有必要。所以我们展开一个waro工作的情况。</p>
+<p>关于volatile, 主要原因是因为smem也会被寄存器缓存，而寄存器又是线程私有的，如果B线程访问被A线程的寄存器缓存的位置，而A寄存器还没写会smem，这个时候结果肯定是不对的，volatile关键字告诉编译器从内存中读取，而不是寄存器。因此我猜测要么所有线程都不会将变量缓存到自己的寄存器，要么就访问的时候将寄存器中的值写会smem，但是这样感觉开销很大。 </p>
+<p>看了Stack Overflow， 上面说</p>
+<p>Removing the volatile keyword from that code could break that code on Fermi and Kepler GPUS. Those GPUs lack instructions to directly operate on shared memory. Instead, the compiler must emit a load/store pair to and from register.</p>
+<p>What the volatile keyword does in this context is make the compiler honour that load-operate-store cycle and not perform an optimisation that would keep the value of s_data[tid] in register. To keep the sum accumulating in register would break the implicit memory syncronisation required to make that warp level shared memory summation work correctly.</p>
+<p>所以sdata[tid]加了之后可能还存在于寄存器中，如果不写回smem， 其他线程要读取这个数据，就读取的没有更新的数据，这样算出来结果肯定是错的。</p>
+<h3 id="kernel-6-完全展开"><a href="#kernel-6-完全展开" class="headerlink" title="kernel 6 完全展开"></a>kernel 6 完全展开</h3><p>上面只展开了剩下任务个数等于warpsize的情况，还可以再展开，但是有一定如果BLOCKSIZE变了，我们需要注释一些或者或者添加一些代码，这样很麻烦，我们可以使用C++提供的模板功能，在编译期生成代码，自动实现展开。<br><img src="/../imgs/2023-04-24-22-59-32.png"></p>
+<h3 id="kernel-7-一个线程计算更多元素"><a href="#kernel-7-一个线程计算更多元素" class="headerlink" title="kernel 7 一个线程计算更多元素"></a>kernel 7 一个线程计算更多元素</h3><p><img src="/../imgs/2023-04-24-23-13-21.png"></p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>CSE 599 I Accelerated Computing - Programming GPUs Lecture 18.pdf<br><a target="_blank" rel="noopener" href="https://tschmidt23.github.io/cse599i/CSE%20599%20I%20Accelerated%20Computing%20-%20Programming%20GPUs%20Lecture%2018.pdf">https://tschmidt23.github.io/cse599i/CSE%20599%20I%20Accelerated%20Computing%20-%20Programming%20GPUs%20Lecture%2018.pdf</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.eecs.umich.edu/courses/eecs570/hw/parprefix.pdf">https://www.eecs.umich.edu/courses/eecs570/hw/parprefix.pdf</a></p>
+<p><a target="_blank" rel="noopener" href="https://developer.download.nvidia.com/assets/cuda/files/reduction.pdf">https://developer.download.nvidia.com/assets/cuda/files/reduction.pdf</a></p>
+<p><a target="_blank" rel="noopener" href="http://giantpandacv.com/project/OneFlow/%E3%80%90BBuf%E7%9A%84CUDA%E7%AC%94%E8%AE%B0%E3%80%91%E4%B8%89%EF%BC%8Creduce%E4%BC%98%E5%8C%96%E5%85%A5%E9%97%A8%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">http://giantpandacv.com/project/OneFlow/%E3%80%90BBuf%E7%9A%84CUDA%E7%AC%94%E8%AE%B0%E3%80%91%E4%B8%89%EF%BC%8Creduce%E4%BC%98%E5%8C%96%E5%85%A5%E9%97%A8%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</a></p>
+<p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/21205471/cuda-in-warp-reduction-and-volatile-keyword?noredirect=1&amp;lq=1">https://stackoverflow.com/questions/21205471/cuda-in-warp-reduction-and-volatile-keyword?noredirect=1&amp;lq=1</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/04/19/spgemm%E7%9A%84cuda%E5%AE%9E%E7%8E%B0/" rel="prev" title="spgemm的cuda实现">
+      <i class="fa fa-chevron-left"></i> spgemm的cuda实现
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2023/04/25/CUDA-prefix-scan%E4%BC%98%E5%8C%96%E7%AC%94%E8%AE%B0/" rel="next" title="CUDA prefix scan优化笔记">
+      CUDA prefix scan优化笔记 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E4%BB%8B%E7%BB%8D"><span class="nav-number">1.</span> <span class="nav-text">问题介绍</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kernel-1-naive%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.</span> <span class="nav-text">kernel 1 naive实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kernel-2-%E9%81%BF%E5%85%8Dwarp-divergent"><span class="nav-number">3.</span> <span class="nav-text">kernel 2 避免warp divergent</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kernel-3-%E9%81%BF%E5%85%8Dbank-conflict"><span class="nav-number">4.</span> <span class="nav-text">kernel 3 避免bank conflict</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kernel-4-make-idle-thread-do-more"><span class="nav-number">5.</span> <span class="nav-text">kernel 4 make idle thread do more</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kernel-%E5%BE%AA%E7%8E%AF%E5%B1%95%E5%BC%80"><span class="nav-number">6.</span> <span class="nav-text">kernel 循环展开</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kernel-6-%E5%AE%8C%E5%85%A8%E5%B1%95%E5%BC%80"><span class="nav-number">7.</span> <span class="nav-text">kernel 6 完全展开</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kernel-7-%E4%B8%80%E4%B8%AA%E7%BA%BF%E7%A8%8B%E8%AE%A1%E7%AE%97%E6%9B%B4%E5%A4%9A%E5%85%83%E7%B4%A0"><span class="nav-number">8.</span> <span class="nav-text">kernel 7 一个线程计算更多元素</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number"></span> <span class="nav-text">参考</span></a></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">John Doe</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">22</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">John Doe</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
