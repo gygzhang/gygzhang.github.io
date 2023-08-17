@@ -145,350 +145,6 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2023/05/21/%E9%9D%A2%E7%BB%8F%E6%B1%87%E6%80%BB/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="John Doe">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Hexo">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/05/21/%E9%9D%A2%E7%BB%8F%E6%B1%87%E6%80%BB/" class="post-title-link" itemprop="url">面经汇总</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2023-05-21 21:16:24 / Modified: 21:19:24" itemprop="dateCreated datePublished" datetime="2023-05-21T21:16:24+08:00">2023-05-21</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="嵌入式"><a href="#嵌入式" class="headerlink" title="嵌入式"></a>嵌入式</h1><ol>
-<li>介绍下总线设备驱动模型</li>
-</ol>
-<ol start="2">
-<li>U-boot启动流程</li>
-</ol>
-<ol>
-<li><p>介绍下总线设备驱动模型；</p>
-</li>
-<li><p>U-boot启动流程；</p>
-</li>
-<li><p>项目xxxAD/DA驱动程序的实现；</p>
-</li>
-<li><p>AD采样率，UDP通信数据量大不大；</p>
-</li>
-<li><p>使用到多线程了吗？多线程之间怎样通信？</p>
-</li>
-<li><p>中断与任务之间通信方式？</p>
-</li>
-<li><p> 中断中使用消息队列需要注意什么？</p>
-</li>
-<li><p> ARM的中断处理流程，以及每个阶段做什么事？</p>
-</li>
-<li><p> 中断上下文；</p>
-</li>
-<li><p>项目中使用到了DMA吗？DMA是什么？我们写程序DMA需要做一些什么？（回答的不好）<br>DMA方式则是以数据块为单位传输的,在所要求传送的数据块全部传送结束时要求CPU进行中断处理,这样大大减少CPU进行中断处理的次数。<br>面试官应该想问的是DMA控制器的中断配置与处理，软件中使用双缓冲区能加快数据读写速度。</p>
-</li>
-<li><p> 项目中用到i.MX6ULL，是否大材小用了？</p>
-</li>
-<li><p> 项目中用的芯片内存有多大，写的程序占用空间？</p>
-</li>
-<li><p> 项目中需要比较难的问题，你是怎么解决的？</p>
-</li>
-<li><p> 除了SPI，你还用到过哪些通信协议？</p>
-</li>
-<li><p> static关键字；</p>
-</li>
-<li><p> 问我还熟悉哪些关键字，答volatile，让我说说；</p>
-</li>
-<li><p> 堆和栈的区别，怎样减少堆和栈的使用？</p>
-</li>
-<li><p> 怎样衡量一个处理器的处理能力，如果项目换成STM32，你会选择哪一款，为什么？</p>
-</li>
-<li><p> 问我有什么问题？答：该部门主要做什么方向的工作。</p>
-</li>
-<li><p>2.2 感谢信（2021.08.26）一面感觉面得还不错吧，但是就是挂了，隔了接近两个月发了感谢信，晕，我加的嵌入式群里基本没有拿到乐鑫的offer，感觉没怎么招人。</p>
-</li>
-<li><p>3 中兴-成都提前批由于参加了中兴捧月算法大赛并获得区域优胜奖，直通终面</p>
-</li>
-<li><p>3.1 现场面试（2021.07.16）50min1. 自我介绍；</p>
-</li>
-<li><p>ARM的开发流程；</p>
-</li>
-<li><p>U-boot和内核的启动流程；</p>
-</li>
-<li><p>设备树是什么时候被识别（加载）的？</p>
-</li>
-<li><p>Linux内核的总线设备驱动模型；</p>
-</li>
-<li><p>举例一个项目，自己负责哪些内容；</p>
-</li>
-<li><p>说一说PID算法；</p>
-</li>
-<li><p>用过哪些系统调用；</p>
-</li>
-<li><p>堆和栈的区别；</p>
-</li>
-<li><p> malloc分配超过内存更大的空间，会发生什么？<br>能够正常分配，malloc能够申请的空间大小与物理内存没有直接关系，仅与程序的虚拟地址空间有关</p>
-</li>
-<li><p>C语言中函数调用的值存放在哪里？（我一开始以为问的是局部变量存放区域：栈区）<br>例如：<br>void funcA(int a, int b){<br>}<br>void funcB(void){</p>
-<pre><code> funcA(1,2);
-</code></pre>
-<p>}<br>那么这个值1和2存放在寄存器中的，比如常用R0 R1寄存器</p>
-</li>
-<li><p> c语言代码规范，然后给我了一段代码，让我评价；</p>
-</li>
-<li><p> 栈空间分配超过最大值时，会发生什么？怎样检测内存溢出？</p>
-</li>
-<li><p> 其他的就问的手上目前有offer吗？家庭情况，目标薪资，意向工作地。</p>
-</li>
-<li><p>3.2 面试通过（2021.07.20）</p>
-</li>
-<li><p>3.3 offer(2021.9.8)月薪17K（其中包含了1200元的餐补）<br>第一年无年终，后边2-6个月年终，一般3个月<br>加班无加班费，1 2 4加班到8点多，周六可能加班<br>每天15元的餐补，加班报销车费和餐费<br>最终拒了。</p>
-</li>
-<li><p>4 浙江大华-西安提前批</p>
-</li>
-<li><p>4.1 一面电话面（2021.07.17）25min1. 自我介绍；</p>
-</li>
-<li><p>C++用的多吗？</p>
-</li>
-<li><p>做过的项目，代码量总共有多少？</p>
-</li>
-<li><p>多线程编程和网络编程有用过吗？</p>
-</li>
-<li><p>linux创建线程的函数；</p>
-</li>
-<li><p>说下字符串相关的函数？<br>strcat/strcmp/strcpy/strncpy/memcpy</p>
-</li>
-<li><p>strcpy与memcpy的不同，memcpy安全吗（memmove）？</p>
-</li>
-<li><p>static的用法；</p>
-</li>
-<li><p>堆和栈的区别？不释放堆空间会导致哪些问题？</p>
-</li>
-<li><p> 内存泄漏和内存溢出的不同？</p>
-</li>
-<li><p> 平时写程序有遇到过类似段错误吗？</p>
-</li>
-<li><p> 怎样检测内存溢出？</p>
-</li>
-<li><p> gdb调试工具熟悉吗？gdb打印堆栈大小的命令：backtrace（bt）；</p>
-</li>
-<li><p> TCP三次握手详细过程；</p>
-</li>
-<li><p> 如果让你写一个TCP Server，你需要用到那些函数？<br>socket/bind/listen/accept/send/recv/close</p>
-</li>
-<li><p> 服务端为什么要用listen监听呢?（感觉回答错了）<br>两个队列（网络编程P84）；</p>
-</li>
-<li><p> 服务端什么时候会建立连接呢？<br>答：当客户端调用connect函数时</p>
-</li>
-<li><p> 平时空闲时间会看书吗？看什么书籍？</p>
-</li>
-<li><p>4.2 二面电话面（2021.07.27）20min1. 主要是问项目，AD采样的精度；</p>
-</li>
-<li><p>项目性能指标达到预定目标吗？</p>
-</li>
-<li><p>驱动程序中用到了中断吗？</p>
-</li>
-<li><p>就是深挖项目；</p>
-</li>
-<li><p>4.3 HR面（2021.07.29）30min1. 本科和研究生期间，有没有遇到时间很紧张的时候？</p>
-</li>
-<li><p>项目中遇到的困难，如何解决；</p>
-</li>
-<li><p>各种问遇到问题该如何解决。。。；</p>
-</li>
-<li><p>工作意向地；</p>
-</li>
-<li><p>女朋友在哪里学习或工作？</p>
-</li>
-<li><p>家是哪里的？</p>
-</li>
-<li><p>意向薪资（杭州或西安）；</p>
-</li>
-<li><p>反问，公司培养体系以及娱乐设施。</p>
-</li>
-<li><p>4.4 意向书（2021.08.03）</p>
-</li>
-<li><p>4.5 offer（2021.09.15）基本月薪19K 西安</p>
-</li>
-<li><p>5 联发科-成都提前批</p>
-</li>
-<li><p>5.1 一面（2021.07.22）70min1. 你用过的ARM9和Cortex-A7芯片做个对比？</p>
-</li>
-<li><p>linux下写过哪些驱动程序？说一下IIC的驱动框架？</p>
-</li>
-<li><p>问项目，客户的需求，用到哪些技术？</p>
-</li>
-<li><p>项目中遇到比较难的问题，怎么解决的？</p>
-</li>
-<li><p>有没有遇到时间紧、任务重的时候，自己怎样安排时间？</p>
-</li>
-<li><p>C语言中#ifndef #define#endif的作用？</p>
-</li>
-<li><p>大端模式和小端模式；</p>
-</li>
-<li><p>给了一个题，让说思路以及写出核心代码；<br>按序找到数组中的最小的k个数，对于一个无序数组，数组中元素为互不相同的整数，请返回其中最小的k个数，顺序与原数组中元素顺序一致。比如：输入<br>4 2<br>2<br>1<br>3<br>4<br>输出2 1<br>说了思路后，面试官说空间复杂度高了，谈到尽量从代码角度降低功耗的问题。</p>
-</li>
-<li><p>跨平台写一个文件，另一平台进行读取文件，需要注意哪些问题？</p>
-</li>
-<li><p> w与wb的区别；</p>
-</li>
-<li><p> 有了解最新技术动态吗？关注新技术发展；</p>
-</li>
-<li><p> 剩下的基本上是聊公司情况，部门工作，新人培养等。</p>
-</li>
-</ol>
-<p>2.5.2 二面（2021.07.29）55min1. 智能汽车比赛，整个系统分了几个模块，每个模块的功能；<br>2. 实用新型专利主要是什么内容；<br>3. 省级创新训练项目；<br>4. 总线设备驱动模型；<br>5. 你怎样看设备树；<br>6. 项目中设备树、设备驱动的详细流程；<br>7. U-boot以及内核的启动流程；<br>8. 被问到与公司领导意见不一致时该怎么办?<br>9. 谈一谈客户技术支持的看法；<br>10. 谈一谈对加班的看法；<br>11. 目前有投其他公司吗？<br>12. 反问：面试官这个部门主要是做手机芯片，做开发，音视频编解码；<br>13. 公司环境不错；<br>2.5.3 面试通过（2021.08.19）<br>2.5.4 联发科成都offer(2021.09.10)基本薪资：统一价，offershow上可以查看；<br>绩效：保证的是4-5个月；去年绩效3个月保底，根据公司营收情况适当调整<br>签字费：3个月，实习期3个月满一次性发放<br>每年3月份会根据评估调研，有一次涨薪机会，也会评级，目前的评级还不能告诉<br>五险按照成都市要求缴纳，7%的住房公积金<br>用餐补贴：早（5元）+中（15元）+晚（15元）基本吃饭自己不花钱<br>加班少，965，如果加班，申请后得加班费（平时1.5倍，周末2倍，节假日3倍）</p>
-<p>PS:<br>整体感觉挺不错，联发科评价都还挺好，只是按照今年的行情来讲，底薪确实低了点。此时，手上其他offer没有纠结，纠结的就是联发科和芯原，联发科做手机芯片驱动此类工作，客户主要是面向vivo、oppo等手机，芯原薪资在后边会说明，方向是GPU编译器开发，芯原体量确实没联发科大，毕竟联发科发展很多年了，芯原有自己的IP定制业务，未来发展应该还是不错的。最终通过导师和韦东山老师的建议，还是选择GPU方向，自己也对这一方面蛮有兴趣的。<br>拒了offer之后成都这边部门负责人打电话，想了解下，问能不能再考虑下，但是我已经签了芯原了，负责人说联发科虽然底薪低，但是加上加班费一个月也能到20K左右。但是目前已经签了，不纠结了。（PS: 去年华为遭受制裁，联发科营收130多亿美元，因此保证了年终4-5个月，但底薪比较低。最终还是拒了，希望自己在芯原Verisilicon努力专研，提升个人竞争力）<br>2.6 海康威视-成都启明星<br>2.6.1 一面电话面（2021.08.17）30min突然打电话过来，电话面试<br>主要问的项目</p>
-<ol>
-<li>项目中用的哪款芯片，它的一些配置，Cortex-A7与ARM9区别有哪些？</li>
-<li>linux内核启动流程；</li>
-<li>C语言中inline关键字，所有时候都会进行内联展开吗？</li>
-<li>公司业务：研究院，芯片固件、驱动、内核、外设；</li>
-<li>6.2 二面视频面（2021.08.25）32min1. 自我介绍；</li>
-<li>最熟悉的项目是哪一个？</li>
-<li>你觉得做这个项目你的最大收获是什么？</li>
-<li>项目过程中遇到哪些问题，怎么解决的？</li>
-<li>用的linux内核版本是多少？为什么要用这个版本呢？</li>
-<li>用到多线程了吗？为什么要用多进程而不用多线程；</li>
-<li>popen</li>
-</ol>
-<p>124#66 9:03:31 PM<br>与system区别；<br>8. 看这个功能还比较简单，为什么用Cortex-A7的ARM芯片；<br>9. 程序做了哪些优化？<br>10. 中断和轮询的效率问题；<br>11. 上位机与下位机的通信？<br>12. 为什么用UDP而不用TCP；<br>13. 问了两个数学题，第一个是1+1/2+1/4+1/8+…+1/2^n=?;第二个是1+1/2+1/3+…+1/n = ?<br>2.6.3 HR面（2021.09.01）20min<br>2.6.4 综合面试（2021.09.09）40min不知道为啥HR面之后还有综合面试，综合面试主要问项目，问的也不深，主要在于解决问题的能力<br>2.6.5 海康成都研究院offer（2021.09.14）底薪80%+绩效20%=19K<br>年终奖3-6个月<br>住房公积金12%<br>餐补20（中午）早上8点半之前（5元）晚上8点半后（20元）<br>1 2 4加班到8点半，3 5 不要求，周末大小周5个小时加班<br>其他时间加班申请通过会给加班费<br>带薪年假 高温补贴等<br>线下签约答疑会时，部门主管加了微信，对于面试表现还是比较满意，希望能够去，方向主要是做芯片固件开发，包括AI芯片、视频编解码芯片等，今年海康和大华的offer还是比较体面了，但是还是考虑到其他因素，最终还是拒了。<br>2.7 大疆-西安正式批<br>2.7.1 笔试（2021.08.14）题型：单选、多选、判断、填空、简答、编程<br>主要考察C语言、实时操作系统、linux相关知识<br>多选题（3’）<br>关于arm的Cortex-M内核寄存器，以下说法正确的是：<br>A. R0~R12为通用寄存器，所有的ARM指令均可访问用于计算；<br>B. R13为栈指针寄存器，包含MSP和PSP，特权模式下使用MSP；<br>C. R14为LR寄存器，用于保存调用函数执行完后的返回值；；<br>D. R15为PC寄存器，执行指令后会由硬件修改，指向下一条指令；</p>
-<p>对于嵌入式实时操作系统RTOS，以下说法正确的是：<br>A．对于抢占式内核，高优先级任务一旦就绪就可以立即被响应；<br>B．对于抢占式内核，同一优先级的任务一般采用时间片轮转调度；<br>C．空闲任务一般设置为最低优先级，当没有其他任务就绪时，会执行空闲任务；<br>D．RTOS执行的每个任务均有独立的任务栈，不需要划分主栈<br>填空题（4’）：</p>
-<ol>
-<li>关于结构体对齐</li>
-<li>将数据从一个地址空间复制到另一个地址空间而不用占用CPU，最好使用DMA方式</li>
-<li>数据直接从用户态地址空间写入到磁盘中，跳过内核缓冲区，这种IO方式叫：直接IO；</li>
-<li>ARM Cortex-A7系列处理器中可以通过什么指令集对向量计算进行加速：NEON；<br>ARM的NEON是类似于X86的SSE2的一种优化的指令集，主要就是为了实现SIMD全称Single Instruction Multiple Data，单指令多数据流，能够复制多个操作数，并把它们打包在大型寄存器的一组指令集。简单来说就是处理一些算法的时候，可以并行处理，大大提高了效率。</li>
-</ol>
-<p>简答题(2*5’)：</p>
-<ol>
-<li><p>用户进程和内核进程抢占执行的时机<br>用户抢占发生于：<br>l 内核从系统调用返回用户空间时；<br>l 从中断处理程序返回用户空间时；<br>详细来说，内核即将返回用户空间的时候，如果need_resched标志被设置，会导致schedule()被调用，此时就会发生用户抢占。内核无论是在中断处理程序还是在系统调用后返回，都会检查need_resched标志是否被设置，如果设置了，内核会选择一个其他（更合适的）进程投入运行。<br>内核抢占发生于：<br>l 中断处理程序退出，且返回内核空间之前；<br>l 内核代码再一次具有可抢占性的时候（比如spinlock_unlock时会preempt_enable()）；<br>l 如果内核中的任务显式地调用schedule()；<br>l 如果内核中的任务阻塞（同样会导致调用schedule()-比如使用mutex/sem/waitqueue获取不到资源时）；</p>
-</li>
-<li><p>定义一个宏，通过结构体成员，找到结构体的首地址#define container_of(ptr, type, member) ({                        \</p>
-<pre><code> const typeof( ((type *)0)-&gt;member ) *__mptr = (ptr);        \
- (type *)( (char *)__mptr - offsetof(type,member) );&#125;)
-</code></pre>
-<p>引申：通过结构体获取结构体成员的偏移地址#define offsetof(TYPE, MEMBER) ((size_t) &amp;((TYPE *)0)-&gt;MEMBER)</p>
-</li>
-</ol>
-<p>编程题：两道编程题，难度中等<br>2.7.2 一面电话面（2021.09.03）面试官是做编译器的，面试官说希望找由编译器开发经验的同学，我晕，我一个应届生，有这开发经历吗？<br>问题全是系统性的问题，比如：<br>问：有没有从零去用FreeRTOS去适配一款新的芯片<br>答：没有，所涉及的STM32也是官方支持的，自己需要做的就是移植工作，修改硬件相关的代码。然后自己讲了下STM32中FreeRTOS的启动流程，自己觉得适配一款芯片需要做哪些事情，能回答的都回答了。<br>面试过程中全是有无这样那样的经历，最终问了面试官，说编译器部门这边比较偏向于社招。。。<br>面完就感觉不是面试官找的人<br>2.7.3 感谢信（2021.09.23）总结：大疆是每个做嵌入式的同学都很想去的，很不甘心，自己所准备的一个也没被问，项目也是没被问到。就感觉部门没有根据简历来应聘，可能面试也需要看一些缘分吧，心塞。。。最终我总结了下，我的问题应该是笔试做得很差，算法题没有好好刷，这一方面是我的弱项，导致后边被捞起来面试就很晚了，有些8月份都面完了。被捞的部门不是很对口，导致面试表现不好，自己准备的相关知识一个没问。所以想要去大疆、华为、oppo、vivo、哲库这种软开和嵌入式都一套题的公司，嵌入式还是得好好刷题。<br>2.8 CVTE-广州提前批<br>2.8.1 一面视频面（2021.08.21）40min1. 自我介绍<br>2. U-boot移植做了哪些事情？<br>3. Nand Flash具体细节，存储空间大小，怎样检查数据是否正确？<br>4. Nand Flash有哪些线？具体操作命令，发命令、发地址、写数据、读数据；<br>5. 内核的启动流程；<br>6. 用过哪些总线？<br>7. 说下IIC具体时序，说下UART、IIC、SPI之间的区别；<br>8. 还用过其他外设总线吗？像SDIO、PCIE等；<br>9. 有做过应用相关的开发吗？<br>10. 进程与线程的区别；<br>11. LCD驱动相关，LCD屏的配置主要有哪些参数，时钟多少，怎样配置；<br>12. LCD时钟与刷新率有关吗？<br>13. 写过shell脚本吗？写过Makefile吗？<br>14. Linux的任务调度；<br>15. 进程间通信有哪些方法？你用过哪些？<br>16. 说下信号量的实现原理；<br>17. 信号量与锁的区别；<br>18. 看了一个程序，问程序输出；<br>class A {<br>public:<br>    void PrintfFun1(void) {<br>        cout &lt;&lt; “PrintfFun1” &lt;&lt; endl;<br>    }</p>
-<pre><code>void PrintfFun2(void) &#123;
-    cout &lt;&lt; &quot;PrintfFun2&quot;  &lt;&lt; endl;
-&#125;
-</code></pre>
-<p>};<br>int main()<br>{<br>    A* pA = NULL;<br>    pA-&gt;PrintfFun1();<br>    pA-&gt;PrintfFun2();<br>    return 0;<br>}<br>并不会出错，能够正常输出。<br>当调用成员函数时，A* pA = NULL只是将实参null传给this指针，PrintfFun1成员函数中并无任何需要通过this指针访问的数据成员，因此没有带来任何影响。<br>但是如果是如下所示：<br>class A {<br>public:<br>    void PrintfFun1(void) {<br>        cout &lt;&lt; “PrintfFun1” &lt;&lt; endl;<br>    }</p>
-<pre><code>void PrintfFun2(void) &#123;
-    cout &lt;&lt; &quot;PrintfFun2&quot; &lt;&lt; data &lt;&lt; endl;
-&#125;
-</code></pre>
-<p>private:<br>    int data = 10;<br>};<br>详细解释：C++的静态绑定<br>pA-&gt; PrintfFun1 ();<br>这语句的意图是：调用对象 pA 的 PrintfFun1成员函数。如果这句话在Java或Python等动态绑定的语言之中，编译器生成的代码大概是：</p>
-<p>找到 pA 的 PrintfFun1成员函数，调用它。（注意，这里的找到是程序运行的时候才找的，这也是所谓动态绑定的含义：运行时才绑定这个函数名与其对应的实际代码。有些地方也称这种机制为迟绑定，晚绑定。）</p>
-<p>但是对于C++。为了保证程序的运行时效率，C++的设计者认为凡是编译时能确定的事情，就不要拖到运行时再查找了。所以C++的编译器看到这句话会这么干：</p>
-<ol>
-<li>查找 pA 的类型，发现它有一个非虚的成员函数叫 PrintfFun1。（编译器干的）</li>
-<li>找到了，在这里生成一个函数调用，直接调A:: PrintfFun1 ( pA )。</li>
-</ol>
-<p>所以到了运行时，由于 PrintfFun1 ()函数里面并没有任何需要解引用 pA 指针的代码，所以真实情况下也不会引发segment fault。这里对成员函数的解析，和查找其对应的代码的工作都是在编译阶段完成而非运行时完成的，这就是所谓的静态绑定，也叫早绑定。<br>19. linux下的命令有用过吗？<br>20. linux下，查找当前目录下所有.c文件下的包含“hello world”字符串的文件的命令（find/grep命令的用法）<br>find ./ -name “*.c” -exec grep -in “hello world” {} ; -print<br>2.8.2 过了几天查看状态，被挂了面试官一脸不屑的样子，回答每一个问题，都会问你确定吗？你确定是这样的吗？搞得我都不自信了。反正面试体验不好，加之网上对CVTE风评也不太好，挂了也没有影响到后边的面试，无所谓了。但是问的问题有必要进行复盘，以免后面问道回答不上来。<br>2.9 商汤科技-成都领航员<br>2.9.1 一面视频面（2021.08.27）60min前30min聊基础技术知识，后30min聊项目，面试体验很好。。。</p>
-<ol>
-<li>自我介绍；</li>
-<li>UART、IIC、SPI差别，速率，接口等；</li>
-<li>UART、RS232、RS422区别；</li>
-<li>自旋锁、互斥锁的区别；</li>
-<li>线程间通信和同步方式有哪些？</li>
-<li>中断上半部和下半部的处理；</li>
-<li>OSI协议分层；</li>
-<li>内存泄</li>
-</ol>
-<p>124#66 9:03:31 PM<br>漏与内存溢出；<br>9. 平时写程序过程中会进行检测吗？方法是什么？<br>10. static关键字；<br>11. 指针与数组的区别；<br>12. 进程与线程；<br>13. 全局变量可不可以定义在可被多个.C文件包含的头文件中？<br>14. 局部变量能否和全局变量重名？<br>15. 项目中的难点是什么，怎样解决的？<br>16. 项目中多线程的处理；<br>17. 上位机为何不用QT，而使用C#呢？<br>2.9.2 无消息某一晚上打电话过来由于在笔试没接，后面就没打过来了，打过去需要分机号，打不通的，离谱。<br>2.10 经纬恒润-成都正式批<br>2.10.1 面试（2021.09.02）总共两轮面试，合并为一轮，两个面试官<br>面试比较简单，项目+基础知识<br>面试感觉有点水水的，看了下网上评价不大好，给的薪资也比较低。<br>2.10.2 感谢信（2021.10.09）<br>2.11 华为-成都正式批<br>2.11.1 机试（2021.09.15）120min9月1号做的机试没过，太难了，自己太菜了。实验室软开的同学没做出来一道完整的，但是只要写一些有输出也会有分的，我题刷的少，做得很差。转投测开，又做了一次，过了。。。<br>2.11.2 一面（2021.09.23）此时已经签了芯原了，想着没有华为的秋招不算圆满，就继续面试。。。<br>项目+机试复盘问思路+手撕代码<br>给定一个小写字母组成的字符串s，最多只能进行一次变换，返回变换后能得到的最小字符串（按照字典序进行比较）。<br>变换规则：交换字符串中任意两个不同位置的字符<br>输入：bcdefa<br>输出：acdefb<br>说明：a和b交换得到最小字符串<br>2.11.3 二面（2021.9.23）项目+手撕<br>自动售货机仅能接收1元，5元，10元纸币，所售卖的货物单价不超过20元，单次售卖1件货物，<br>单次购买投币次数最大10次，如果购买成功售出货物的同时找零，否则退回纸币。<br>（1）        请实现此售卖程序（语言不限）；<br>（2）        请设计用例测试售卖程序；<br>输入：货物单价，第一次投币金额，第二次投币金额，…第N次投币金额<br>输出：售货成功/失败，找零X元/退回X元<br>示例：<br>输入：18,10,5,5<br>输出：售货成功，找零2元<br>2.11.4 主管面（2021.9.23）常规问题<br>当天就给面试通过短信通知，没错，一样的进池子了。。。<br>2.11.5 意向书（2021.11.01）来的很晚了，本来以为没有了，但是岗位是测开。本来也不抱任何希望，还是想做开发，不想做测试。过了几天，成都无线产品线这边hr打电话说14级，20K*（14-16）一般3个月年终，公积金5%，其他什么补贴也没有，工作日加班没加班费，具体分到那个小部门还不能确定，周末加班会有加班费，想着测开就拒了，测开不想去。Hr说不急着拒，让我考虑考虑，后边又打电话，说测开不考虑了，他说要是能转开发，给21K，来不来，我说先确定下能不能转为嵌入式开发吧，能转的话是怎么样的流程，结果就没有后文了。<br>想去华为首先机试一定要通过，自己就是题刷的不好，失去了自己想应聘岗位的面试机会。<br>2.12 汇顶科技-成都正式批<br>2.12.1 一面（2021.09.10）<br>2.12.2 二面（2021.09.10）流程还是很快，面试问的主要是项目，比较常规。<br>2.12.3 offer嵌入式软件；CSI部门</p>
-<ol>
-<li>基本工资18<em>16+1K</em>12</li>
-<li>公积金6%</li>
-<li>1.2w安家费<br>最终拒了，汇顶给的还是挺高的，通过师兄和老师的了解，还是拒了。</li>
-<li>13 芯原-成都正式批</li>
-<li>13.1 技术面（2021.09.17）项目+基础知识，问得很细，项目和比赛基本都问了</li>
-<li>13.2 HR和英语面（2021.09.17）常规问题+英语口语</li>
-<li>13.3 CEO面（2021.09.17）问的是同一个问题：芯原为什么只做服务不做产品<br>当天晚上出结果，第二天参观公司，选择意向岗位，效率挺高，参观了公司，公司文化氛围都不错，师兄也进行了推荐。</li>
-<li>13.4 Offer（2021.09.18）GPU编译器研发，听了导师和韦东山老师的意见，比较推荐去</li>
-<li>基本薪资：offershow上能够查看； </li>
-<li>每年3月份会根据评估调研，有一次涨薪机会，据说20%~30% </li>
-<li>五险按照成都市要求缴纳，12%的住房公积金</li>
-<li>不加班，965 </li>
-</ol>
-<p>最终签约，希望能在芯原有好的发展，国内GPU和龙头企业差距还很大，国家目前投入的也还是挺多，芯原与其他公司也在深度合作，比如英特尔、景嘉微等，国产芯片不仅仅是制造问题还有知识产权IP的问题，国产GPU道阻且长，加油吧。<br>2.14 卓胜微-成都正式批<br>2.14.1 线下面试（2021.08.31）50min面试也是基本知识，包括C语言、操作系统，项目细节实现，详细的问了每个项目。<br>面完之后，hr小姐姐还带我去楼下吃了个饭，送了点礼物。人文关怀还是不错的，非常感谢。<br>2.14.2 offerHR打电话说面试通过了，问其他offer目前的情况，给的多少。。。<br>就感觉是按照别的公司来给，最终我手上已经有比较多的offer，他们给的好像是16*16，然后可以申请给股票，等等一些东西，然后说薪资还可以协商，能够与汇顶给到一样的价格，公司成都这边目前还是主要偏向于社招。<br>后边我签芯原之后，就明确给Hr说了下，就说不准备签约了，主要考虑到成都这边规模还是比较小，但是技术栈还是挺不错的，蓝牙协议栈、驱动开发。<br>2.15 中电10所-成都正式批芯原面试当天，早上学校中期答辩，答辩完马上打车去芯原参加面试，面完芯原就打车去一个酒店面试10所去了，面完之后挺累的一天。<br>2.15.1 技术面（2021.09.17）40min面试问的还是很细，包括了C、C#、C++语言基本特性，常规问题，还有项目的细节<br>2.15.2 综合面试（2021.09.17）20min比较常规，大概说了下薪资福利，加班情况，HR说目前业务还是比较繁忙，需要加班，让有个心理准备。<br>2.15.3 Offer年薪17个W，加班比较多，考虑后拒了。</p>
-<ol start="3">
-<li>嵌入式软件学习路线秋招结束，一直想写一个嵌入式学习路线，仅供参考。本科和研究生一直在学习嵌入式，总的来讲，学的也很平庸，没什么特别突出的点。本科双非，硕士985，本科有国奖、国家励志等，比赛有飞思卡尔和电赛等。研究生没怎么参加比赛，主要是跟着导师做项目，项目偏嵌入式软件，测控方面多一点，获得过学业奖学金等。以下嵌入式比较重要的两个点，可以参考，STM32加实时操作系统，目前应用的非常广泛，ARM加Linux是一种提高，可以深入学习，处理性能会有大幅提升，比如Cortex-A系列。</li>
-<li>1 STM32+RTOS这一部分的学习，主要是购买正点原子的开发板，结合正点原子和野火的文档，深入理解，野火的文档非常不错，对于一些知识讲得很好。</li>
-<li>C语言基本知识，比如：结构体、数组、指针等相关知识，以及用面向对象的思想写C代码，在linux内核源码中会有很多这样的例子，比如，函数指针的应用等；</li>
-<li>STM32裸机相关知识，包括时钟、定时器、中断、GPIO、串口、IIC、SPI等，主要理解硬件原理以及通过代码编程练习对硬件的操作，main函数之前做了哪些事情等等；</li>
-<li>RTOS的相关知识，可以选择uCOS、FreeRTOS、RT-Thread等，我主要偏向于FreeRTOS的学习，因为项目会用到，其中主要掌握FreeRTOS的启动流程，最好移植一个RTOS到STM32中并跑起来；任务调度的原理；任务间通信的几种方式，比如常用的信号量、消息队列，同时实时操作系统中对中断的相应，任务处理的过程，如何保证实时性，软件定时器的学习，包括优先级翻转的问题等；</li>
-<li>2 ARM+Linux我基本上是跟着韦东山老师的视频学习的，讲得很好，比较难，有时需要看2-3遍，最关键的就是自己要动手写代码。</li>
-<li>ARM体系与架构，ARM裸机相关知识，与STM32裸机知识会有很多相通之处，中断处理流程，时钟的配置，外设的基本通信等；</li>
-<li>Linux驱动开发，包括字符设备、块设备和网络设备，我们应届生可以着重字符设备驱动的学习，块设备需要了解Nand Flash/Nor Flash/EMMC的驱动框架，网络设备也作为了解即可。字符设备包括GPIO、IIC、SPI、LCD等，学习驱动，非常重要的就是理解驱动的框架，驱动主要就是框架+硬件操作，比如：理解字符设备驱动框架、总线设备驱动模型；</li>
-<li>同时需要学习Linux文件系统与设备驱动的关系，用户态与内核态的交互，比如：file、inode结构体的理解等；</li>
-<li>掌握Uboot启动流程、Linux内核的启动流程，最好能有移植U-boot、内核，构建根文件系统的经历，从而更好的理解嵌入式系统的组成；</li>
-<li>掌握常用Linux命令，网络编程，自己能写简单的TCP、UDP服务端和客户端代码；</li>
-</ol>
-<p>3.3 项目加持前边的学习可以和项目同时结合，项目中学习也是非常好的，单片机项目有很多，常见的运用就是，将各种传感器结合起来，进行数据处理，可以加上目前比较火的物联网协议，比如MQTT/NB-IoT等；ARM-Linux项目，我一边是导师项目有需求，需要写驱动，另外需要写上位机分析数据、处理数据等，一方面跟着韦东山老师的视频，视频中也会有很多项目，包括：电子量产工具、数码相框、摄像头视频监控、电源管理等项目，其中用到的编程思想和基本的操作方法不会过时，而且还会是学习的提升（特此说明，仅仅是个人的学习路线，仅供参考，更没有打广告的意思哈）。朱友鹏老师的海思项目据说也不错，但是对于我来说太贵了，就没学，如果想学习音视频方向的，可以试试。但是我发现面试过程中，面试官非常看重基础，以及对知识的灵活运用能力，项目的多与少影响不大，或者说是加分项吧。</p>
-<p>3.4 推荐书籍比较基础的入门的书籍网上有很多资源，自己可以在网上找，以下推荐书籍中，仅仅是我个人觉得比较好的，曾经看过一些的，很多书都是需要看的时候翻看一下，更多的是看网上资料和官方文档。<br>学习推荐书籍：</p>
-<ol>
-<li>《C和指针》，指针是C语言的灵魂，这本书指针部分讲的还可以，更深层的知识可以网上找技术博客看；</li>
-<li>《王道程序员求职宝典》，这里边会有很多笔试或者面试中语言本身的基础但又很容易出错的知识点，非常推荐，平时项目中有些就会碰到，看这本书的时候就会更加理解；</li>
-<li>《剑指Offer》，笔试刷题用到，与LeetCode结合刷题；</li>
-<li>《大话数据结构》，数据结构入门推荐，C语言版本，更好理解但不利于编程，需要造轮子；</li>
-<li>《程序是怎样跑起来的》、《计算机是怎样跑起来的》、《网络是怎样连接的》，全面而整体理解程序、计算机、网络的基本组成，运行机理；</li>
-<li>《Unix网络编程》、《Unix环境高级编程》，适合当参考书，需要学习的时候翻看一下；</li>
-<li>《ARM体系结构与编程》-杜春雷，其中的ARM中断和异常部分我是看的最多的，还有寄存器部分；</li>
-<li>《Linux内核完全注释》-赵炯，麻雀虽小五脏俱全；</li>
-<li>《Linux设备驱动开发详解：基于Linux4.0内核》，驱动参考书籍；</li>
-<li>《C/C++代码调试的艺术》，常见代码调试方法，面试中目前很多都问了，内存泄漏、内存溢出相关问题；</li>
-<li>《程序员的自我修养》，特别是内存管理和预处理、编译、链接的过程，面试经常问；</li>
-<li>【正点原子】I.MX6U嵌入式Linux驱动开发指南V1.6.pdf；</li>
-<li>野火PDF《STM32 HAL库开发实战指南》、《FreeRTOS内核实现与应用开发实战指南》；</li>
-<li>韦东山老师官方文档《嵌入式Linux应用开发完全手册V4.0_韦东山全系列视频文档-IMX6ULL开发板》<br>其他书籍可能也会有一些，欢迎补充。。。</li>
-</ol>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
     <link itemprop="mainEntityOfPage" href="http://example.com/2023/05/15/STM32F1%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -2015,7 +1671,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-02-15 12:35:48" itemprop="dateModified" datetime="2023-02-15T12:35:48+08:00">2023-02-15</time>
+                <time title="Modified: 2023-06-10 22:39:58" itemprop="dateModified" datetime="2023-06-10T22:39:58+08:00">2023-06-10</time>
               </span>
 
           
@@ -2045,7 +1701,10 @@
 <li> 删除链表的倒数第 N 个结点 - 力扣（LeetCode）<br><a target="_blank" rel="noopener" href="https://leetcode.cn/problems/remove-nth-node-from-end-of-list/">https://leetcode.cn/problems/remove-nth-node-from-end-of-list/</a></li>
 </ol>
 <p>快慢指针，技巧，需要对链表进行修改时，可以在头结点前面增加dummy节点，可以避免讨论删除头结点的情况。</p>
-<p>===============================================<br>21. 合并两个有序链表 - 力扣（LeetCode）<br><a target="_blank" rel="noopener" href="https://leetcode.cn/problems/merge-two-sorted-lists/">https://leetcode.cn/problems/merge-two-sorted-lists/</a></p>
+<p>===============================================</p>
+<ol start="21">
+<li>合并两个有序链表 - 力扣（LeetCode）<br><a target="_blank" rel="noopener" href="https://leetcode.cn/problems/merge-two-sorted-lists/">https://leetcode.cn/problems/merge-two-sorted-lists/</a></li>
+</ol>
 <p>使用dummy节点，不用单独处理当添加第一个节点的情况，不然判断新链表的头结点是否为空（也就是添加第一个节点的情况）</p>
 <p>=====================================</p>
 <ol start="23">
@@ -2580,6 +2239,109 @@ You could not do this with std::shared_ptr alone, because all std::shared_ptr in
   
   
 
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/07/27/C-%E5%A4%9A%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E9%97%B4%E5%85%B1%E4%BA%AB%E6%95%B0%E6%8D%AE/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/07/27/C-%E5%A4%9A%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E9%97%B4%E5%85%B1%E4%BA%AB%E6%95%B0%E6%8D%AE/" class="post-title-link" itemprop="url">C++多线程-线程间共享数据</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-07-27 19:59:24" itemprop="dateCreated datePublished" datetime="2022-07-27T19:59:24+08:00">2022-07-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-08-02 10:45:49" itemprop="dateModified" datetime="2022-08-02T10:45:49+08:00">2022-08-02</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="race-condition"><a href="#race-condition" class="headerlink" title="race condition"></a>race condition</h2><p>在并发中，race condition是指结果依赖于多个线程之间的操作顺序。</p>
+<h2 id="解决方法"><a href="#解决方法" class="headerlink" title="解决方法"></a>解决方法</h2><ol>
+<li>对数据加以保护</li>
+<li>无锁算法</li>
+<li>将数据的更新处理为事务</li>
+</ol>
+<p>C++中最常见的数据保护机制是mutex</p>
+<h2 id="使用mutex保护数据"><a href="#使用mutex保护数据" class="headerlink" title="使用mutex保护数据"></a>使用mutex保护数据</h2><h3 id="在C-中使用mutex"><a href="#在C-中使用mutex" class="headerlink" title="在C++中使用mutex"></a>在C++中使用mutex</h3><p>一般，mutex配合std::lock_guard使用：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;list&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;mutex&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;algorithm&gt;</span></span></span><br><span class="line">std::list&lt;<span class="keyword">int</span>&gt; some_list;</span><br><span class="line">std::mutex some_mutex;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">add_to_list</span><span class="params">(<span class="keyword">int</span> new_value)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">guard</span><span class="params">(some_mutex)</span></span>;</span><br><span class="line">    some_list.<span class="built_in">push_back</span>(new_value);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">bool</span> <span class="title">list_contains</span><span class="params">(<span class="keyword">int</span> value_to_find)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">guard</span><span class="params">(some_mutex)</span></span>;</span><br><span class="line">    <span class="keyword">return</span> std::<span class="built_in">find</span>(some_list.<span class="built_in">begin</span>(),some_list.<span class="built_in">end</span>(),value_to_find)</span><br><span class="line">    != some_list.<span class="built_in">end</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="写一个线程安全的栈"><a href="#写一个线程安全的栈" class="headerlink" title="写一个线程安全的栈"></a>写一个线程安全的栈</h2><h3 id="为什么说std-stack不是线程安全的"><a href="#为什么说std-stack不是线程安全的" class="headerlink" title="为什么说std::stack不是线程安全的"></a>为什么说std::stack不是线程安全的</h3><p>问题的核心在于pop()操作和top()操作，之前在用stl刷题的时候，我就在曾经疑惑过，为什么不让pop()操作返回栈顶的元素呢？本科数据结构课上不就是让pop返回栈顶的元素吗？原因在于我们没考虑多线程和异常的产生。</p>
+<p>看下面的代码：<br><img src="/img/2022-07-28-11-19-03.png"><br>只考虑有这两个线程，他们依次执行了top获取了栈顶的元素，然后再依次执行了pop依次删除了栈里面两个相邻的元素。这显然和我们预期的执行结果不一致，所以这里产生了race condition。</p>
+<p>那怎么解决呢？ 我们可以想到用mutex来保护top和pop操作，但是这样也是有问题的：当储存对象的栈调用pop返回的时候，首先会修改stack数据结构，然后再返回一个对象，可能会调用复制构造函数(<a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/33795529/does-a-return-by-value-call-the-copy-constructor-or-the-copy-assignment-operator">why</a>)，如果这个复制构造函数扔出一个异常，比如内存不够(std::bad_alloc)，然后这个元素就直接丢失了(因为栈上也没这个对象了)。 所以stack的设计者，将这已操作分为top和pop：首先获取栈顶元素，然后再从栈顶移除该元素。这样的话，如果不能安全的复制栈顶元素，该元素将留在栈上。如果是内存不够，可能等一会又有内存了呢？</p>
+<blockquote>
+<p>参考： <a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/33795529/does-a-return-by-value-call-the-copy-constructor-or-the-copy-assignment-operator">c++ - Does a return by value call the copy constructor or the copy assignment operator? - Stack Overflow</a></p>
+</blockquote>
+<h3 id="如何避免top和pop带来的race-condition"><a href="#如何避免top和pop带来的race-condition" class="headerlink" title="如何避免top和pop带来的race condition"></a>如何避免top和pop带来的race condition</h3><h4 id="方法1：给pop传递一个引用"><a href="#方法1：给pop传递一个引用" class="headerlink" title="方法1：给pop传递一个引用"></a>方法1：给pop传递一个引用</h4><p>如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">std::vector&lt;<span class="keyword">int</span>&gt; result;</span><br><span class="line">some_stack.<span class="built_in">pop</span>(result);</span><br></pre></td></tr></table></figure>
+<p>缺点：需要pop之前构建对象。 而且也不现实，因为构造一个对象在时间或资源上是很昂贵的，对于其他类型来说，可能这个时候构造函数需要的参数也一定可用。 而且这种方法，需要储存的对象是可赋值的。然而许多用户定义的类可能没有提供赋值构造函数。</p>
+<h4 id="方法2：要求一个没有异常抛出的构造函数或者移动构造函数"><a href="#方法2：要求一个没有异常抛出的构造函数或者移动构造函数" class="headerlink" title="方法2：要求一个没有异常抛出的构造函数或者移动构造函数"></a>方法2：要求一个没有异常抛出的构造函数或者移动构造函数</h4><p>对于值返回的pop函数来说，只有一个异常安全的问题。所以可以要求使用线程安全的对象其复制构造函数不会抛出异常。</p>
+<p>这样的解决方案也不是理想的，因为会抛出异常和没有移动构造函数的用户定义的类要多一些。</p>
+<h4 id="方法3：返回一个指向要pop对象的指针"><a href="#方法3：返回一个指向要pop对象的指针" class="headerlink" title="方法3：返回一个指向要pop对象的指针"></a>方法3：返回一个指向要pop对象的指针</h4><p>返回一个指向对象的指针显然是不会抛出异常的。 但是缺点是我们需要一个方法来管理该对象的内存，而且对于简单的类型(比如int), 管理内存的开销要比直接返回值要大。</p>
+<p>如果要使用这种方案的话，std::share_ptr是一个很好的选择。这样不仅避免了内存泄露，同时内存分配是完全有标准库来掌控的。 但是我们需要为栈上的每个对象调用new， 和非线程安全的栈比起来，这是一个很大的开销。</p>
+<h4 id="方法4：（方法1-2）或者（方法1-3）"><a href="#方法4：（方法1-2）或者（方法1-3）" class="headerlink" title="方法4：（方法1+2）或者（方法1+3）"></a>方法4：（方法1+2）或者（方法1+3）</h4><p>对于泛型编程来说，灵活性很重要。</p>
+<h4 id="方法1-3"><a href="#方法1-3" class="headerlink" title="方法1+3"></a>方法1+3</h4><p>代码如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;exception&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;memory&gt;</span></span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">empty_stack</span>:</span> std::exception</span><br><span class="line">&#123;</span><br><span class="line">    <span class="function"><span class="keyword">const</span> <span class="keyword">char</span>* <span class="title">what</span><span class="params">()</span> <span class="keyword">const</span> <span class="title">throw</span><span class="params">()</span></span>;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="keyword">template</span>&lt;<span class="keyword">typename</span> T&gt;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">threadsafe_stack</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="built_in">threadsafe_stack</span>();</span><br><span class="line">    <span class="built_in">threadsafe_stack</span>(<span class="keyword">const</span> threadsafe_stack&amp;);</span><br><span class="line">    threadsafe_stack&amp; <span class="keyword">operator</span>=(<span class="keyword">const</span> threadsafe_stack&amp;) = <span class="keyword">delete</span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">push</span><span class="params">(T new_value)</span></span>;</span><br><span class="line">    <span class="function">std::shared_ptr&lt;T&gt; <span class="title">pop</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">pop</span><span class="params">(T&amp; value)</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">bool</span> <span class="title">empty</span><span class="params">()</span> <span class="keyword">const</span></span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>具体的实现如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;exception&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;memory&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;mutex&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stack&gt;</span></span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">empty_stack</span>:</span> std::exception</span><br><span class="line">&#123;</span><br><span class="line">    <span class="function"><span class="keyword">const</span> <span class="keyword">char</span>* <span class="title">what</span><span class="params">()</span> <span class="keyword">const</span> <span class="title">throw</span><span class="params">()</span></span>;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="keyword">template</span>&lt;<span class="keyword">typename</span> T&gt;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">threadsafe_stack</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">    std::stack&lt;T&gt; data;</span><br><span class="line">    <span class="keyword">mutable</span> std::mutex m;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="built_in">threadsafe_stack</span>()&#123;&#125;</span><br><span class="line">    <span class="built_in">threadsafe_stack</span>(<span class="keyword">const</span> threadsafe_stack&amp; other)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">lock</span><span class="params">(other.m)</span></span>;</span><br><span class="line">        data=other.data;</span><br><span class="line">    &#125;</span><br><span class="line">    threadsafe_stack&amp; <span class="keyword">operator</span>=(<span class="keyword">const</span> threadsafe_stack&amp;) = <span class="keyword">delete</span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">push</span><span class="params">(T new_value)</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">lock</span><span class="params">(m)</span></span>;</span><br><span class="line">        data.<span class="built_in">push</span>(new_value);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function">std::shared_ptr&lt;T&gt; <span class="title">pop</span><span class="params">()</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">lock</span><span class="params">(m)</span></span>;</span><br><span class="line">        <span class="keyword">if</span>(data.<span class="built_in">empty</span>()) <span class="keyword">throw</span> <span class="built_in">empty_stack</span>();</span><br><span class="line">        <span class="function">std::shared_ptr&lt;T&gt; <span class="keyword">const</span> <span class="title">res</span><span class="params">(std::make_shared&lt;T&gt;(data.top()))</span></span>;</span><br><span class="line">        data.<span class="built_in">pop</span>();</span><br><span class="line">        <span class="keyword">return</span> res;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">pop</span><span class="params">(T&amp; value)</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">lock</span><span class="params">(m)</span></span>;</span><br><span class="line">        <span class="keyword">if</span>(data.<span class="built_in">empty</span>()) <span class="keyword">throw</span> <span class="built_in">empty_stack</span>();</span><br><span class="line">        value=data.<span class="built_in">top</span>();</span><br><span class="line">        data.<span class="built_in">pop</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">bool</span> <span class="title">empty</span><span class="params">()</span> <span class="keyword">const</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">lock</span><span class="params">(m)</span></span>;</span><br><span class="line">        <span class="keyword">return</span> data.<span class="built_in">empty</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>上面这种实现将top和pop操作合二为一，从而避免了race condition。pop提供了两个重载过后的函数：</p>
+<ul>
+<li>如果pop没有提供参数，那么将返回一个std::share_ptr对象，因为我们返回的是一个指针，则对象的复制构造函数不会被调用，自然也避免了产生异常。</li>
+<li>如果pop提供了一个引用，则会在pop内调用对象的赋值构造函数，又因为赋值构造函数不会创造新的内存区域，而只是简单的赋值，这样就避免了异常的产生。</li>
+</ul>
+<p>我们可以看到，锁的粒度太小是产生race condition的原因，通过增大锁的粒度，我们成功的实现了一个线程安全的stack类。但是也不是锁的粒度越大就越好，以前linux在内核中就只用了一个锁，这样的后果就是一个4核的电脑性能还没单核的性能强。</p>
+<p>有的问题可以通过增加锁的粒度来解决，但是有时候还是需要更加细粒度的锁来保护数据，比如需要保护一个类的不同的对象。这时，要么把加锁这件事留给使用者，要么用一个单独的锁来锁住这个类的所有实例。</p>
+<p>当在一个操作中需要多个锁，这时候可能会带来新的问题：死锁。</p>
+<h3 id="死锁：-问题和解决方案"><a href="#死锁：-问题和解决方案" class="headerlink" title="死锁： 问题和解决方案"></a>死锁： 问题和解决方案</h3><p>一种办法是以相同的顺序加锁</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
 
   
   <nav class="pagination">
@@ -2649,7 +2411,7 @@ You could not do this with std::shared_ptr alone, because all std::shared_ptr in
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">22</span>
+          <span class="site-state-item-count">21</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
