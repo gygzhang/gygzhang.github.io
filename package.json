@@ -1,0 +1,17 @@
+{
+  "name": "gygzhang.github.io",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && pagefind --site dist",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "latest",
+    "@astrojs/sitemap": "latest",
+    "astro": "latest",
+    "pagefind": "latest",
+    "sharp": "latest"
+  }
+}
