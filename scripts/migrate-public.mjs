@@ -12,16 +12,26 @@ const posts = [
 
 function htmlToMarkdown(html) {
   return html
-    .replace(/<pre><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, (_, code) => `\n\n\`\`\`\n${code.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')}\n\`\`\`\n\n`)
+    .replace(/<td class="gutter">[\s\S]*?<\/td>/gi, '')
+    .replace(/<figure class="highlight[^>]*>[\s\S]*?<td class="code"><pre>/gi, '<pre><code>')
+    .replace(/<\/pre><\/td>[\s\S]*?<\/figure>/gi, '</code></pre>')
+    .replace(/<img[^>]+src="([^"]+)"[^>]*>/gi, '![]($1)')
+    .replace(/<pre><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, (_, code) => `\n\n\`\`\`\n${code.replace(/<span class="line">/g, '').replace(/<\/span>/g, '').replace(/<br\s*\/?\s*>/gi, '\n').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&#123;/g, '{').replace(/&#125;/g, '}').replace(/&#42;/g, '*')}\n\`\`\`\n\n`)
+    .replace(/<code>([\s\S]*?)<\/code>/gi, '`$1`')
+    .replace(/<em>([\s\S]*?)<\/em>/gi, '*$1*')
     .replace(/<h([2-6])[^>]*>([\s\S]*?)<\/h\1>/gi, (_, level, text) => `\n\n${'#'.repeat(Number(level))} ${text.replace(/<[^>]+>/g, '')}\n\n`)
     .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, (_, text) => `\n- ${text.replace(/<[^>]+>/g, '')}`)
     .replace(/<br\s*\/?\s*>/gi, '\n')
     .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '$1\n\n')
     .replace(/<[^>]+>/g, '')
+    .replace(/\/\.\.\/imgs\//g, '/imgs/')
     .replace(/&nbsp;/g, ' ')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&amp;/g, '&')
+    .replace(/&#123;/g, '{')
+    .replace(/&#125;/g, '}')
+    .replace(/&#42;/g, '*')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
