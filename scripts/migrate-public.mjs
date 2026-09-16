@@ -16,7 +16,7 @@ function htmlToMarkdown(html) {
     .replace(/<figure class="highlight[^>]*>[\s\S]*?<td class="code"><pre>/gi, '<pre><code>')
     .replace(/<\/pre><\/td>[\s\S]*?<\/figure>/gi, '</code></pre>')
     .replace(/<img[^>]+src="([^"]+)"[^>]*>/gi, '![]($1)')
-    .replace(/<pre><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, (_, code) => `\n\n\`\`\`\n${code.replace(/<span class="line">/g, '').replace(/<\/span>/g, '').replace(/<br\s*\/?\s*>/gi, '\n').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&#123;/g, '{').replace(/&#125;/g, '}').replace(/&#42;/g, '*')}\n\`\`\`\n\n`)
+    .replace(/<pre><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, (_, code) => `\n\n\`\`\`cpp\n${code.replace(/<span class="line">/g, '').replace(/<\/span>/g, '').replace(/<br\s*\/?\s*>/gi, '\n').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&#123;/g, '{').replace(/&#125;/g, '}').replace(/&#42;/g, '*')}\n\`\`\`\n\n`)
     .replace(/<code>([\s\S]*?)<\/code>/gi, '`$1`')
     .replace(/<em>([\s\S]*?)<\/em>/gi, '*$1*')
     .replace(/<h([2-6])[^>]*>([\s\S]*?)<\/h\1>/gi, (_, level, text) => `\n\n${'#'.repeat(Number(level))} ${text.replace(/<[^>]+>/g, '')}\n\n`)

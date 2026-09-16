@@ -25,7 +25,7 @@ visibility: public
 
 代码如下：
 
-```
+```cpp
 __global__ void scan(float *g_odata, float *g_idata, int n) 
 { 
     extern  __shared__  float temp[]; // allocated on invocation 
@@ -76,7 +76,7 @@ __global__ void scan(float *g_odata, float *g_idata, int n)
 
 看这个代码的时候，觉得确实应该是这样，很巧妙，但是自己想肯定大概率是想不出来的。 分析一下代码，首先是每个线程加载2个元素到smem中，0号线程加载内存位置为0,1， 1号线程加载2，3，… 这样的模式，可以预见，应该是会产生bank conflict的，因为第16个线程会加载内存位置为32，33的元素，和0号线程加载的内存位置在同一个bank。 接下来，进入循环，
 
-```
+```cpp
 这里有一个假设，如果block中线程个数为512， n一定是1024, 第一轮肯定是相邻的元素相加，这会得到512个结果，所以需要用512个线程。
 for (int d = n>>1; d > 0; d >>= 1) // build sum in place up the tree 
 { 
@@ -96,7 +96,7 @@ for (int d = n>>1; d > 0; d >>= 1) // build sum in place up the tree
 
 接下来要清除temp的最后一个位置的元素。然后进行从root到leaves的遍历。
 
-```
+```cpp
 for (int d = 1; d 2) // traverse down tree & build scan 
 { 
     offset >>= 1; 
@@ -123,7 +123,7 @@ for (int d = 1; d 2) // traverse down tree & build scan
 
 我们定义这样的宏：
 
-```
+```cpp
 #define SHARED_MEMORY_BANKS 32
 #define LOG_MEM_BANKS 5
 #define ROW_BY_32(n) ((n) >> LOG_MEM_BANKS)
@@ -144,7 +144,7 @@ for (int d = 1; d 2) // traverse down tree & build scan
 
 一开始我们从全局内存加载数据到smem中的时候，每个线程加载两个相邻的数据，可以知道，第16个线程会加载第32，33个数据，第32个线程会加载第64,65个数据，因此发生了3-way bank conflict， 因此我们改变策略，我们知道，一个block的数据个数是线程个数的2倍，因此将数据分为两半，block的第i个线程加载第`g_data[0]`和`g_data[0+n/2]`， 这样可以保证一个warp访问的数据是连续的，因此不会发生bank conflict。代码如下
 
-```
+```cpp
 int ai = threadID;
 int bi = threadID + (n / 2);
 int bankOffsetA = CONFLICT_FREE_OFFSET(ai);
@@ -156,7 +156,7 @@ temp[bi + bankOffsetB] = input[bi];
 
 root和leaves之间的代码：
 
-```
+```cpp
 int ai = offset*(2*thid+1)-1; 
 int bi = offset*(2*thid+2)-1; 
 ai += CONFLICT_FREE_OFFSET(ai); 

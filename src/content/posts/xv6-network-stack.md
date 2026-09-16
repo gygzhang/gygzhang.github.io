@@ -14,7 +14,7 @@ xv6和linux一样，都是一切皆文件，所以如果用户想要向`socket`�
 
 以下是`read`的实现：
 
-```
+```cpp
 uint64
 sys_read(void)
 {
@@ -49,7 +49,7 @@ HARDWARE OWNS ALL DESCRIPTORS BETWEEN [HEAD AND TAIL].
 
 读取到的数据会传递给net_rx()函数，这个函数会将这个以太网数据包的头部提取出来，然后判断上层协议类型是什么(xv6协议栈支持IP,ARP)，代码如下：
 
-```
+```cpp
 void net_rx(struct mbuf *m)
 {
   struct eth *ethhdr;
@@ -76,7 +76,7 @@ void net_rx(struct mbuf *m)
 
 这个函数会解析udp数据包的头部，然后转到sockrecvudp()函数，该函数的定义如下：
 
-```
+```cpp
 // called by protocol handler layer to deliver UDP packets
 void
 sockrecvudp(struct mbuf *m, uint32 raddr, uint16 lport, uint16 rport)
